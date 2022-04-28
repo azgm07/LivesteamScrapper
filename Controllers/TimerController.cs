@@ -1,14 +1,4 @@
-﻿using LivesteamScrapper.Models;
-using Microsoft.AspNetCore.Mvc;
-using System.Diagnostics;
-using HtmlAgilityPack;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Threading.Tasks;
-using System.Net;
-using System.Text;
-using System.IO;
-using PuppeteerSharp;
+﻿using Microsoft.AspNetCore.Mvc;
 
 namespace LivesteamScrapper.Controllers
 {
@@ -18,8 +8,8 @@ namespace LivesteamScrapper.Controllers
         private DateTime stopTime;
         private DateTime lapTime;
 
-        public bool hasStarted;
-        public int lapCount;
+        public bool HasStarted { get; private set; }
+        public int LapCount { get; private set; }
 
         private readonly ILogger<Controller> _logger;
 
@@ -29,18 +19,18 @@ namespace LivesteamScrapper.Controllers
             startTime = new DateTime();
             stopTime = new DateTime();
             lapTime = new DateTime();
-            hasStarted = false;
-            lapCount = 0;
+            HasStarted = false;
+            LapCount = 1;
         }
 
         //Start timer
         public DateTime StartTimer()
         {
-            if(!hasStarted)
+            if (!HasStarted)
             {
                 startTime = DateTime.Now;
-                lapCount = 0;
-                hasStarted = true;
+                LapCount = 1;
+                HasStarted = true;
             }
             return startTime;
         }
@@ -48,7 +38,7 @@ namespace LivesteamScrapper.Controllers
         //Get the current TimeSpan between start and now
         public TimeSpan? GetTimerTotal()
         {
-            if(!hasStarted)
+            if (!HasStarted)
             {
                 return null;
             }
@@ -63,21 +53,21 @@ namespace LivesteamScrapper.Controllers
         public TimeSpan? GetTimerLap()
         {
             TimeSpan lapTimer;
-            if(!hasStarted)
+            if (!HasStarted)
             {
                 return null;
             }
             else
             {
-                if(lapCount == 0)
+                if (LapCount == 1)
                 {
-                    lapCount = 1;
+                    LapCount = 2;
                     lapTimer = DateTime.Now - startTime;
                     lapTime = DateTime.Now;
                 }
                 else
                 {
-                    lapCount += 1;
+                    LapCount += 1;
                     lapTimer = DateTime.Now - lapTime;
                     lapTime = DateTime.Now;
                 }
@@ -89,14 +79,14 @@ namespace LivesteamScrapper.Controllers
         //Stop timer
         public DateTime? StopTimer()
         {
-            if(!hasStarted)
+            if (!HasStarted)
             {
                 return null;
             }
             else
             {
                 stopTime = DateTime.Now;
-                hasStarted = false;
+                HasStarted = false;
                 return stopTime;
             }
         }

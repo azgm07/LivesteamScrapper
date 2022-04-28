@@ -1,7 +1,11 @@
 ﻿using LivesteamScrapper.Models;
 using Microsoft.AspNetCore.Mvc;
-using System.Text;
-using PuppeteerSharp;
+using OpenQA.Selenium;
+using OpenQA.Selenium.Chrome;
+using OpenQA.Selenium.Support.UI;
+using SeleniumExtras.WaitHelpers;
+using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 
 namespace LivesteamScrapper.Controllers
 {
@@ -10,67 +14,41 @@ namespace LivesteamScrapper.Controllers
         private readonly ILogger<Controller> _logger;
         public bool IsScrapping { get; set; }
         public bool IsBrowserOpened { get; set; }
-        private string _chromePath;
-        private Browser? browser;
-        private Page? page;
-        public ScrapperController(ILogger<Controller> logger, string chromePath)
+        private ChromeDriver? browser;
+
+        //Constructor
+        public ScrapperController(ILogger<Controller> logger)
         {
             _logger = logger;
-            _chromePath = chromePath;
+        }
+        //Finalizer
+        ~ScrapperController()
+        {
+            if (browser != null)
+            {
+                browser.Dispose();
+            }
         }
 
-        public async Task OpenBrowserPage(string fullUrl, string waitSelector)
+        public void OpenBrowserPage(string fullUrl, string waitSelector)
         {
             try
             {
-                //Load a new Browser if browser is not open
-                if (browser == null)
+                if (browser == null || browser.Url != fullUrl)
                 {
-                    //Load new virtual browser with local chrome
-                    var options = new LaunchOptions()
+                    //Returns a new BrowserPage
+                    ChromeOptions options = new ChromeOptions()
                     {
-                        Headless = true,
-                        ExecutablePath = _chromePath
+                        //BinaryLocation = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
                     };
+                    options.AddArguments(new List<string>() { "headless", "disable-gpu", "log-level=3" });
+                    browser = new ChromeDriver(options);
 
-                    browser = await Puppeteer.LaunchAsync(options, null);
-                }
-
-                //Check if the page is open on the same url, if not open it
-                if (page != null && page.Url == fullUrl)
-                {
-                    return;
-                }
-                else
-                {
-                    //Close the current page before open a new one if not null.
-                    if (page != null)
-                    {
-                        await page.CloseAsync();
-                    }
-                    page = await browser.NewPageAsync();
-
-                    //Go to the page url and wait for DOMContentLoaded event
-                    List<WaitUntilNavigation> navArray = new List<WaitUntilNavigation>();
-                    navArray.Add(WaitUntilNavigation.DOMContentLoaded);
-                    var waitNavigation = new NavigationOptions()
-                    {
-                        WaitUntil = navArray.ToArray(),
-                        Timeout = 60000
-                    };
-                    await page.GoToAsync(fullUrl, waitNavigation);
-
-                    //Wait for specific selector to load
-                    var waitOptions = new WaitForSelectorOptions()
-                    {
-                        Visible = true,
-                        Timeout = 60000
-                    };
-                    await page.WaitForSelectorAsync(waitSelector, waitOptions);
+                    WebDriverWait wait = new WebDriverWait(browser, TimeSpan.FromSeconds(10));
+                    browser.Navigate().GoToUrl(fullUrl);
+                    wait.Until(ExpectedConditions.ElementExists(By.ClassName(waitSelector)));
                     Console.WriteLine("Page is ready");
                 }
-
-                IsBrowserOpened = true;
             }
             catch (Exception e)
             {
@@ -79,23 +57,7 @@ namespace LivesteamScrapper.Controllers
             }
         }
 
-        public async Task CloseBrowserPage()
-        {
-            if(page != null)
-            {
-                await page.CloseAsync();
-                page = null;
-            }
-            if(browser != null)
-            {
-                await browser.CloseAsync();
-                browser = null;
-            }
-
-            IsBrowserOpened = false;
-        }
-
-        public async Task<List<ChatMessageModel>> ReadChat()
+        public List<ChatMessageModel> ReadChat()
         {
             //Verify if is already scrapping and return case not
             if (IsScrapping)
@@ -103,35 +65,43 @@ namespace LivesteamScrapper.Controllers
                 return new List<ChatMessageModel>();
             }
             //Verify if the browser is already open with a page
-            if (page == null)
+            if (browser == null)
             {
                 Console.WriteLine("Page not open");
                 return new List<ChatMessageModel>();
             }
+
             try
             {
                 IsScrapping = true;
                 //Retrive new comments
-                List<ChatMessageModel> scrapeMessages = new List<ChatMessageModel>();
-                var messages = await page.QuerySelectorAllAsync(".message");
-                foreach (var message in messages)
+                BlockingCollection<ChatMessageModel> scrapeMessages = new BlockingCollection<ChatMessageModel>();
+                var chat = browser.FindElement(By.XPath("//*[@id=\"root\"]/div/div/div[2]/div[4]/div[1]/div/div/div[4]/div[1]/div[1]/div[1]"));
+                var messages = chat.FindElements(By.ClassName("message"));
+                Console.WriteLine($"Messages found: {messages.Count}");
+                Parallel.ForEach(messages, (message) =>
                 {
-                    ChatMessageModel newMessage = new ChatMessageModel();
-                    string messageAuthor = await message.EvaluateFunctionAsync<string>("()=>document.querySelector('span[class=\"username color-grey\"]').innerHTML");
-                    string messageContent = await message.EvaluateFunctionAsync<string>("()=>document.querySelector('span[class=\"message-text\"]').innerHTML");
+                    try
+                    {
+                        ChatMessageModel newMessage = new ChatMessageModel();
+                        string messageAuthor = message.FindElement(By.CssSelector("div > div > span.components-chatbox-user-menu > span")).Text;
+                        string messageContent = message.FindElement(By.CssSelector("div > div > span.message-text")).Text;
 
-                    newMessage.Author = messageAuthor;
-                    newMessage.Content = messageContent;
+                        newMessage.Author = messageAuthor;
+                        newMessage.Content = messageContent;
 
-                    scrapeMessages.Add(newMessage);
-                }
-                Console.WriteLine($"List of messages: {scrapeMessages.ToString()}");
-                return scrapeMessages;
+                        scrapeMessages.TryAdd(newMessage);
+
+                    }
+                    catch { } //Ignore errors of FindElement
+                });
+
+                return scrapeMessages.ToList();
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
-                throw;
+                return new List<ChatMessageModel>();
             }
             finally
             {
@@ -139,10 +109,10 @@ namespace LivesteamScrapper.Controllers
             }
         }
 
-        public async Task<int?> ReadViewerCounter()
+        public int? ReadViewerCounter()
         {
             //Verify if the browser is already open with a page
-            if (page == null)
+            if (browser == null)
             {
                 Console.WriteLine("Page not open");
                 return null;
@@ -151,21 +121,22 @@ namespace LivesteamScrapper.Controllers
             {
                 //Retrive new comments
                 int? viewersCount = null;
-                var counterText = await page.EvaluateFunctionAsync<string>("()=>document.querySelector('span[class=\"viewer-count\"]').innerHTML");
-                
-                if(int.TryParse(counterText, out int result))
+                var counter = browser.FindElement(By.CssSelector("#layout-content > div > div > div.channel-top-bar > div > div.components-profile-card-center.only-center > div.channel-infos > span > span"));
+                string counterText = counter.GetAttribute("textContent");
+                counterText = Regex.Replace(counterText, "[^0-9]", "");
+                if (int.TryParse(counterText, out int result))
                 {
                     viewersCount = result;
                 }
 
-                Console.WriteLine($"Count: {viewersCount.ToString()}");
+                Console.WriteLine($"Count: {viewersCount}");
                 return viewersCount;
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
-                throw;
+                return null;
             }
-        }        
+        }
     }
 }

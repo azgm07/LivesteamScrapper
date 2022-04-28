@@ -20,19 +20,29 @@ namespace LivesteamScrapper.Controllers
             return View();
         }
 
-        public async Task RunScrapper()
+        public IActionResult Privacy()
+        {
+            return View();
+        }
+
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public IActionResult Error()
+        {
+            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        }
+
+        public Task RunScrapper()
         {
             //Controllers
-            string chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
-            ScrapperController scrapperController = new ScrapperController(_logger, chromePath);
+            ScrapperController scrapperController = new ScrapperController(_logger);
             TimerController timerController = new TimerController(_logger);
             FileController fileController = new FileController(_logger);
 
             //Iniciate browser page
-            string url = "https://booyah.live/velloso?source=28";
-            string htmlSelector = ".message-list";
-            await scrapperController.OpenBrowserPage(url, htmlSelector);
-            
+            string url = "https://booyah.live/vanquilha";
+            string htmlSelector = "message-list";
+            scrapperController.OpenBrowserPage(url, htmlSelector);
+
             //Variables
             int highestViwerCount = 0;
             ConcurrentDictionary<string, int> chatInteractions = new ConcurrentDictionary<string, int>();
@@ -41,23 +51,25 @@ namespace LivesteamScrapper.Controllers
             Console.WriteLine($"Start time: {timerController.StartTimer()}");
 
             int test = 60;
+            int miliseconds = 5000;
             while (test > 0)
             {
+                DateTime start = DateTime.Now;
+
                 //Local variables
-                int? counter = await scrapperController.ReadViewerCounter();
-                List<ChatMessageModel> chatMessages = await scrapperController.ReadChat();
+                int? counter = scrapperController.ReadViewerCounter();
+                List<ChatMessageModel> chatMessages = scrapperController.ReadChat();
 
                 //Get highest viwercount
-                if(counter != null && counter.Value >= highestViwerCount)
+                if (counter != null && counter.Value >= highestViwerCount)
                 {
                     highestViwerCount = counter.Value;
                 }
 
                 //Get message counter for each viewer
-                Parallel.ForEach(chatMessages, (message) => 
-                //foreach (var message in chatMessages)
+                Parallel.ForEach(chatMessages, (message) =>
                 {
-                    if(chatInteractions.ContainsKey(message.Author))
+                    if (chatInteractions.ContainsKey(message.Author))
                     {
                         int value = chatInteractions[message.Author];
                         chatInteractions.TryUpdate(message.Author, value++, value);
@@ -69,24 +81,21 @@ namespace LivesteamScrapper.Controllers
                 }
                 );
 
-                Thread.Sleep(5000);
-                fileController.WriteToCsv(chatInteractions.Keys.ToList());
+                TimeSpan timeSpan = DateTime.Now - start;
+                if (timeSpan.Milliseconds < miliseconds)
+                {
+                    Thread.Sleep(miliseconds - timeSpan.Milliseconds);
+                }
+
+                Console.WriteLine($"Lap count: {timerController.LapCount} - Lap timer: {timerController.GetTimerLap()}");
                 test -= 1;
-
-                Console.WriteLine($"Lap count: {timerController.lapCount.ToString()} - Lap timer: {timerController.GetTimerLap()}");
             }
+
+            fileController.WriteToCsv(chatInteractions.Keys.ToList());
+            _ = chatInteractions;
             Console.WriteLine($"Stop time: {timerController.StopTimer()}");
-        }
 
-        public IActionResult Privacy()
-        {
-            return View();
-        }
-
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+            return Task.CompletedTask;
         }
     }
 }

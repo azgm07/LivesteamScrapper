@@ -1,18 +1,9 @@
-﻿using LivesteamScrapper.Models;
-using Microsoft.AspNetCore.Mvc;
-using System.Diagnostics;
-using HtmlAgilityPack;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Threading.Tasks;
-using System.Net;
+﻿using Microsoft.AspNetCore.Mvc;
 using System.Text;
-using System.IO;
-using PuppeteerSharp;
 
 namespace LivesteamScrapper.Controllers
 {
-    public class FileController: Controller
+    public class FileController : Controller
     {
         private readonly ILogger<Controller> _logger;
 
