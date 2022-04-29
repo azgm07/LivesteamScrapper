@@ -16,7 +16,9 @@ namespace LivesteamScrapper.Controllers
 
         public IActionResult Index()
         {
-            Task.Run(RunScrapper);
+            ScrapperController scrapper = CreateScrapper("booyah", "pelegrino1993");
+            //Task.Run(() => RunViewerScrapper(scrapper));
+            Task.Run(() => RunChatScrapper(scrapper));
             return View();
         }
 
@@ -31,71 +33,149 @@ namespace LivesteamScrapper.Controllers
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
 
-        public Task RunScrapper()
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="website"></param>
+        /// <param name="livestreamPath"></param>
+        /// <returns></returns>
+        public ScrapperController CreateScrapper(string website, string livestreamPath)
         {
             //Controllers
-            ScrapperController scrapperController = new ScrapperController(_logger);
+            EnvironmentModel environment = EnvironmentModel.CreateEnvironment(website);
+            ScrapperController scrapperController = new ScrapperController(_logger, environment);
+
+            //Iniciate browser page
+            scrapperController.OpenBrowserPage(livestreamPath);
+
+            return scrapperController;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="scrapperController"></param>
+        /// <returns></returns>
+        public Task RunViewerScrapper(ScrapperController scrapperController)
+        {
+            //Controllers
             TimerController timerController = new TimerController(_logger);
             FileController fileController = new FileController(_logger);
 
-            //Iniciate browser page
-            string url = "https://booyah.live/vanquilha";
-            string htmlSelector = "message-list";
-            scrapperController.OpenBrowserPage(url, htmlSelector);
-
             //Variables
-            int highestViwerCount = 0;
-            ConcurrentDictionary<string, int> chatInteractions = new ConcurrentDictionary<string, int>();
+            int highestViewerCount = 0;
 
             //Loop scrapping per sec.
-            Console.WriteLine($"Start time: {timerController.StartTimer()}");
+            Console.WriteLine($"Viewer Start time: {timerController.StartTimer()}");
 
-            int test = 60;
-            int miliseconds = 5000;
+            int test = 20;
+            double miliseconds = 5000;
+
+            List<string> listCounter = new List<string>();
+
             while (test > 0)
             {
                 DateTime start = DateTime.Now;
 
                 //Local variables
                 int? counter = scrapperController.ReadViewerCounter();
-                List<ChatMessageModel> chatMessages = scrapperController.ReadChat();
+
+                if (counter.HasValue)
+                {
+                    listCounter.Add(counter.Value.ToString());
+                }
 
                 //Get highest viwercount
-                if (counter != null && counter.Value >= highestViwerCount)
+                if (counter.HasValue && counter.Value >= highestViewerCount)
                 {
-                    highestViwerCount = counter.Value;
+                    highestViewerCount = counter.Value;
                 }
 
-                //Get message counter for each viewer
-                Parallel.ForEach(chatMessages, (message) =>
-                {
-                    if (chatInteractions.ContainsKey(message.Author))
-                    {
-                        int value = chatInteractions[message.Author];
-                        chatInteractions.TryUpdate(message.Author, value++, value);
-                    }
-                    else
-                    {
-                        chatInteractions.TryAdd(message.Author, 1);
-                    }
-                }
-                );
-
+                //Timer e sleep control
                 TimeSpan timeSpan = DateTime.Now - start;
-                if (timeSpan.Milliseconds < miliseconds)
+                if (timeSpan.TotalMilliseconds < miliseconds)
                 {
-                    Thread.Sleep(miliseconds - timeSpan.Milliseconds);
+                    Thread.Sleep((int)(miliseconds - timeSpan.TotalMilliseconds));
                 }
 
-                Console.WriteLine($"Lap count: {timerController.LapCount} - Lap timer: {timerController.GetTimerLap()}");
+                Console.WriteLine($"Viewer Lap count: {timerController.LapCount} - Lap timer: {timerController.GetTimerLap()}");
                 test -= 1;
             }
 
-            fileController.WriteToCsv(chatInteractions.Keys.ToList());
-            _ = chatInteractions;
-            Console.WriteLine($"Stop time: {timerController.StopTimer()}");
+            fileController.WriteToCsv("count.csv", listCounter);
+            Console.WriteLine($"Viewer Stop time: {timerController.StopTimer()}");
 
             return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="scrapperController"></param>
+        /// <returns></returns>
+        public Task RunChatScrapper(ScrapperController scrapperController)
+        {
+            //Controllers
+            TimerController timerController = new TimerController(_logger);
+            FileController fileController = new FileController(_logger);
+
+            //Variables
+            Dictionary<string, string> chatInteractions = new Dictionary<string, string>();
+
+            //Loop scrapping per sec.
+            Console.WriteLine($"\nChat Start time: {timerController.StartTimer()}");
+
+            int test = 120;
+            double miliseconds = 5000;
+
+            while (test > 0)
+            {
+                DateTime start = DateTime.Now;
+
+                //Local variables
+                List<ChatMessageModel> chatMessages = scrapperController.ReadChat();
+
+                //Get message counter for each viewer
+                foreach (var author in chatMessages.Select(chatMessages => chatMessages.Author))
+                {
+                    if (chatInteractions.ContainsKey(author))
+                    {
+                        chatInteractions[author] = IncrementStringNumber(chatInteractions[author]);
+                    }
+                    else
+                    {
+                        chatInteractions.TryAdd(author, "1");
+                    }
+                }
+
+                //Timer e sleep control
+                TimeSpan timeSpan = DateTime.Now - start;
+                if (timeSpan.TotalMilliseconds < miliseconds)
+                {
+                    Thread.Sleep((int)(miliseconds - timeSpan.TotalMilliseconds));
+                }
+
+                Console.WriteLine($"\nChat Lap count: {timerController.LapCount} - Lap timer: {timerController.GetTimerLap()}");
+                test -= 1;
+            }
+
+            List<string> fileLines = chatInteractions.SelectMany(kvp => kvp.Value.Select(val => $"{kvp.Key} : {val}")).ToList();
+
+            fileController.WriteToCsv("chat.csv", fileLines);
+            Console.WriteLine($"\nChat Stop time: {timerController.StopTimer()}");
+
+            return Task.CompletedTask;
+        }
+
+        public string IncrementStringNumber(string str)
+        {
+            string strNew = "";
+            if (!string.IsNullOrEmpty(str) && int.TryParse(str, out int num))
+            {
+                num++;
+                strNew = num.ToString();
+            }
+            return strNew;
         }
     }
 }

@@ -14,12 +14,15 @@ namespace LivesteamScrapper.Controllers
         private readonly ILogger<Controller> _logger;
         public bool IsScrapping { get; set; }
         public bool IsBrowserOpened { get; set; }
+        public readonly EnvironmentModel environment;
         private ChromeDriver? browser;
+        private string lastMessage = "";
 
         //Constructor
-        public ScrapperController(ILogger<Controller> logger)
+        public ScrapperController(ILogger<Controller> logger, EnvironmentModel environment)
         {
             _logger = logger;
+            this.environment = environment;
         }
         //Finalizer
         ~ScrapperController()
@@ -30,10 +33,12 @@ namespace LivesteamScrapper.Controllers
             }
         }
 
-        public void OpenBrowserPage(string fullUrl, string waitSelector)
+        public void OpenBrowserPage(string path)
         {
             try
             {
+                lastMessage = "";
+                string fullUrl = environment.Http + path;
                 if (browser == null || browser.Url != fullUrl)
                 {
                     //Returns a new BrowserPage
@@ -46,7 +51,7 @@ namespace LivesteamScrapper.Controllers
 
                     WebDriverWait wait = new WebDriverWait(browser, TimeSpan.FromSeconds(10));
                     browser.Navigate().GoToUrl(fullUrl);
-                    wait.Until(ExpectedConditions.ElementExists(By.ClassName(waitSelector)));
+                    wait.Until(ExpectedConditions.ElementExists(By.ClassName(environment.Selector)));
                     Console.WriteLine("Page is ready");
                 }
             }
@@ -75,28 +80,79 @@ namespace LivesteamScrapper.Controllers
             {
                 IsScrapping = true;
                 //Retrive new comments
-                BlockingCollection<ChatMessageModel> scrapeMessages = new BlockingCollection<ChatMessageModel>();
-                var chat = browser.FindElement(By.XPath("//*[@id=\"root\"]/div/div/div[2]/div[4]/div[1]/div/div/div[4]/div[1]/div[1]/div[1]"));
-                var messages = chat.FindElements(By.ClassName("message"));
-                Console.WriteLine($"Messages found: {messages.Count}");
-                Parallel.ForEach(messages, (message) =>
+                List<ChatMessageModel> scrapeMessages = new List<ChatMessageModel>();
+                var chat = browser.FindElement(environment.ChatContainer);
+                var messages = chat.FindElements(environment.MessageContainer);
+
+                //Transform all messages to a list in order
+                foreach (var message in messages)
                 {
+                    ChatMessageModel newMessage = new ChatMessageModel();
+                    string messageAuthor, messageContent;
+
                     try
                     {
-                        ChatMessageModel newMessage = new ChatMessageModel();
-                        string messageAuthor = message.FindElement(By.CssSelector("div > div > span.components-chatbox-user-menu > span")).Text;
-                        string messageContent = message.FindElement(By.CssSelector("div > div > span.message-text")).Text;
+                        messageAuthor = message.FindElement(environment.MessageAuthor).Text;
+                    }
+                    catch 
+                    {
+                        messageAuthor = "";
+                    }
 
+                    try
+                    {
+                        messageContent = message.FindElement(environment.MessageContent).Text;
+                    }
+                    catch
+                    {
+                        messageContent = "";
+                    }
+
+                    if(!string.IsNullOrEmpty(messageAuthor))
+                    {
                         newMessage.Author = messageAuthor;
                         newMessage.Content = messageContent;
 
-                        scrapeMessages.TryAdd(newMessage);
-
+                        scrapeMessages.Add(newMessage);
                     }
-                    catch { } //Ignore errors of FindElement
-                });
+                }
+                
+                Console.WriteLine($"Messages found: {scrapeMessages.Count}");
 
-                return scrapeMessages.ToList();
+                //Limits the return list based on the lastmessage found
+                int index = -1;
+                List<ChatMessageModel> returnMessages;
+
+                if(!string.IsNullOrEmpty(lastMessage) && scrapeMessages.Count > 0)
+                {
+                    index = scrapeMessages.FindLastIndex(item => string.Concat(item.Author, " - ", item.Content) == lastMessage);                  
+                    Console.WriteLine($"Last message index: {index + 1}");
+                    Console.WriteLine($"Last message found: {lastMessage}");
+                    lastMessage = string.Concat(scrapeMessages[scrapeMessages.Count - 1].Author, " - ", scrapeMessages[scrapeMessages.Count - 1].Content);
+                }
+                else if(scrapeMessages.Count > 0)
+                {
+                    Console.WriteLine($"Last message index: {index + 1}");
+                    Console.WriteLine($"Last message found: {lastMessage}");
+                    lastMessage = string.Concat(scrapeMessages[scrapeMessages.Count - 1].Author, " - ", scrapeMessages[scrapeMessages.Count - 1].Content);
+                }
+                else
+                {
+                    Console.WriteLine($"Last message index: {index + 1}");
+                    Console.WriteLine($"Last message found: {lastMessage}");
+                }
+
+                if (scrapeMessages.Count > 0 && scrapeMessages.Count - 1 != index)
+                {
+                    returnMessages = scrapeMessages.GetRange(index + 1, scrapeMessages.Count - (index + 1));
+                }
+                else
+                {
+                    returnMessages = new List<ChatMessageModel>();
+                }
+                
+                Console.WriteLine($"Return count: {returnMessages.Count}");
+                return returnMessages;
             }
             catch (Exception e)
             {
@@ -121,7 +177,7 @@ namespace LivesteamScrapper.Controllers
             {
                 //Retrive new comments
                 int? viewersCount = null;
-                var counter = browser.FindElement(By.CssSelector("#layout-content > div > div > div.channel-top-bar > div > div.components-profile-card-center.only-center > div.channel-infos > span > span"));
+                var counter = browser.FindElement(environment.CounterContainer);
                 string counterText = counter.GetAttribute("textContent");
                 counterText = Regex.Replace(counterText, "[^0-9]", "");
                 if (int.TryParse(counterText, out int result))
