@@ -185,7 +185,7 @@ namespace LivesteamScrapper.Controllers
                     viewersCount = result;
                 }
 
-                Console.WriteLine($"Count: {viewersCount}");
+                Console.WriteLine($"\nCount: {viewersCount}\n");
                 return viewersCount;
             }
             catch (Exception e)

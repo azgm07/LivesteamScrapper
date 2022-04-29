@@ -17,8 +17,9 @@ namespace LivesteamScrapper.Controllers
         public IActionResult Index()
         {
             ScrapperController scrapper = CreateScrapper("booyah", "pelegrino1993");
-            //Task.Run(() => RunViewerScrapper(scrapper));
-            Task.Run(() => RunChatScrapper(scrapper));
+            int minutes = 10;
+            Task.Run(() => RunViewerScrapper(scrapper, minutes));
+            Task.Run(() => RunChatScrapper(scrapper, minutes));
             return View();
         }
 
@@ -56,7 +57,7 @@ namespace LivesteamScrapper.Controllers
         /// </summary>
         /// <param name="scrapperController"></param>
         /// <returns></returns>
-        public Task RunViewerScrapper(ScrapperController scrapperController)
+        public Task RunViewerScrapper(ScrapperController scrapperController, int timeInMinutes)
         {
             //Controllers
             TimerController timerController = new TimerController(_logger);
@@ -68,12 +69,12 @@ namespace LivesteamScrapper.Controllers
             //Loop scrapping per sec.
             Console.WriteLine($"Viewer Start time: {timerController.StartTimer()}");
 
-            int test = 20;
-            double miliseconds = 5000;
+            double milliseconds = timeInMinutes * 60000;
+            double waitMilliseconds = 5000;
 
             List<string> listCounter = new List<string>();
 
-            while (test > 0)
+            while (milliseconds > 0)
             {
                 DateTime start = DateTime.Now;
 
@@ -93,13 +94,14 @@ namespace LivesteamScrapper.Controllers
 
                 //Timer e sleep control
                 TimeSpan timeSpan = DateTime.Now - start;
-                if (timeSpan.TotalMilliseconds < miliseconds)
+                if (timeSpan.TotalMilliseconds < waitMilliseconds)
                 {
-                    Thread.Sleep((int)(miliseconds - timeSpan.TotalMilliseconds));
+                    Thread.Sleep((int)(waitMilliseconds - timeSpan.TotalMilliseconds));
                 }
 
-                Console.WriteLine($"Viewer Lap count: {timerController.LapCount} - Lap timer: {timerController.GetTimerLap()}");
-                test -= 1;
+                milliseconds -= timeSpan.TotalMilliseconds;
+
+                //Console.WriteLine($"Viewer Lap count: {timerController.LapCount} - Lap timer: {timerController.GetTimerLap()}");
             }
 
             fileController.WriteToCsv("count.csv", listCounter);
@@ -113,7 +115,7 @@ namespace LivesteamScrapper.Controllers
         /// </summary>
         /// <param name="scrapperController"></param>
         /// <returns></returns>
-        public Task RunChatScrapper(ScrapperController scrapperController)
+        public Task RunChatScrapper(ScrapperController scrapperController, int timeInMinutes)
         {
             //Controllers
             TimerController timerController = new TimerController(_logger);
@@ -125,10 +127,10 @@ namespace LivesteamScrapper.Controllers
             //Loop scrapping per sec.
             Console.WriteLine($"\nChat Start time: {timerController.StartTimer()}");
 
-            int test = 120;
-            double miliseconds = 5000;
+            double milliseconds = timeInMinutes * 60000;
+            double waitMilliseconds = 5000;
 
-            while (test > 0)
+            while (milliseconds > 0)
             {
                 DateTime start = DateTime.Now;
 
@@ -150,13 +152,14 @@ namespace LivesteamScrapper.Controllers
 
                 //Timer e sleep control
                 TimeSpan timeSpan = DateTime.Now - start;
-                if (timeSpan.TotalMilliseconds < miliseconds)
+                if (timeSpan.TotalMilliseconds < waitMilliseconds)
                 {
-                    Thread.Sleep((int)(miliseconds - timeSpan.TotalMilliseconds));
+                    Thread.Sleep((int)(waitMilliseconds - timeSpan.TotalMilliseconds));
                 }
 
+                milliseconds -= timeSpan.TotalMilliseconds;
+
                 Console.WriteLine($"\nChat Lap count: {timerController.LapCount} - Lap timer: {timerController.GetTimerLap()}");
-                test -= 1;
             }
 
             List<string> fileLines = chatInteractions.SelectMany(kvp => kvp.Value.Select(val => $"{kvp.Key} : {val}")).ToList();
