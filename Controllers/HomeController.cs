@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Text;
 
 namespace LivesteamScrapper.Controllers
 {
@@ -56,10 +57,10 @@ namespace LivesteamScrapper.Controllers
         {
             //Controllers
             EnvironmentModel environment = EnvironmentModel.CreateEnvironment(website);
-            ScrapperController scrapperController = new ScrapperController(_logger, environment);
+            ScrapperController scrapperController = new ScrapperController(_logger, environment, website, livestreamPath);
 
             //Iniciate browser page
-            scrapperController.OpenBrowserPage(livestreamPath);
+            scrapperController.OpenBrowserPage();
 
             return scrapperController;
         }
@@ -115,7 +116,7 @@ namespace LivesteamScrapper.Controllers
                 totalMsec -= (DateTime.Now - start).TotalMilliseconds;
             }
 
-            fileController.WriteToCsv("count.csv", listCounter);
+            WriteCounters(listCounter, scrapperController.Website, scrapperController.Livestream);
             timerController.StopTimer();
 
             return Task.CompletedTask;
@@ -130,10 +131,9 @@ namespace LivesteamScrapper.Controllers
         {
             //Controllers
             TimerController timerController = new TimerController(_logger, "RunChatScrapper");
-            FileController fileController = new FileController(_logger);
 
             //Variables
-            Dictionary<string, string> chatInteractions = new Dictionary<string, string>();
+            List<ChatMessageModel> chatMessages = new List<ChatMessageModel>();
 
             //Loop scrapping per sec.
             timerController.StartTimer();
@@ -146,20 +146,8 @@ namespace LivesteamScrapper.Controllers
                 DateTime start = DateTime.Now;
 
                 //Local variables
-                List<ChatMessageModel> chatMessages = scrapperController.ReadChat();
-
-                //Get message counter for each viewer
-                foreach (var author in chatMessages.Select(chatMessages => chatMessages.Author))
-                {
-                    if (chatInteractions.ContainsKey(author))
-                    {
-                        chatInteractions[author] = IncrementStringNumber(chatInteractions[author]);
-                    }
-                    else
-                    {
-                        chatInteractions.TryAdd(author, "1");
-                    }
-                }
+                (List<ChatMessageModel> currentMessages, int lastIndex) = scrapperController.ReadChat();
+                chatMessages.AddRange(currentMessages);
 
                 //Timer e sleep control
                 TimeSpan timeSpan = DateTime.Now - start;
@@ -170,11 +158,10 @@ namespace LivesteamScrapper.Controllers
 
                 totalMsec -= (DateTime.Now - start).TotalMilliseconds;
             }
-
-            List<string> fileLines = chatInteractions.SelectMany(kvp => kvp.Value.Select(val => $"{kvp.Key} : {val}")).ToList();
-
-            fileController.WriteToCsv("chat.csv", fileLines);
+                        
             timerController.StopTimer();
+
+            WriteChat(chatMessages, scrapperController.Website, scrapperController.Livestream);
 
             return Task.CompletedTask;
         }
@@ -188,6 +175,56 @@ namespace LivesteamScrapper.Controllers
                 strNew = num.ToString();
             }
             return strNew;
+        }
+
+        public void WriteChat(List<ChatMessageModel> chatMessages, string website, string livestream)
+        {
+            //Variables
+            Dictionary<string, string> chatInteractions = new Dictionary<string, string>();
+
+            //Get message counter for each viewer
+            foreach (var author in chatMessages.Select(chatMessages => chatMessages.Author))
+            {
+                if (chatInteractions.ContainsKey(author))
+                {
+                    chatInteractions[author] = IncrementStringNumber(chatInteractions[author]);
+                }
+                else
+                {
+                    chatInteractions.TryAdd(author, "1");
+                }
+            }
+
+            List<string> fileLines = chatInteractions.SelectMany(kvp => kvp.Value.Select(val => $"{kvp.Key} : {val}")).ToList();
+
+            string file = $"{GetUntilSpecial(website.ToLower())}-{GetUntilSpecial(livestream.ToLower())}-chat.csv";
+
+            FileController.WriteToCsv(file, fileLines);
+        }
+
+        public void WriteCounters(List<string> counters, string website, string livestream)
+        {
+            string file = $"{GetUntilSpecial(website.ToLower())}-{GetUntilSpecial(livestream.ToLower())}-counters.csv";
+
+            FileController.WriteToCsv(file, counters);
+        }
+
+        public string GetUntilSpecial(string text)
+        {
+            //Get until a special character appear
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < text.Length; i++)
+            {
+                if ((text[i] >= '0' && text[i] <= '9') || (text[i] >= 'A' && text[i] <= 'Z') || (text[i] >= 'a' && text[i] <= 'z') || text[i] == '.' || text[i] == '_')
+                {
+                    sb.Append(text[i]);
+                }
+                else
+                {
+                    break;
+                }
+            }
+            return sb.ToString();
         }
     }
 }

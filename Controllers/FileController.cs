@@ -13,15 +13,26 @@ namespace LivesteamScrapper.Controllers
         }
 
         //Write CSV lines with a list of strings
-        public void WriteToCsv(string filename, List<string> lines)
+        public static void WriteToCsv(string filename, List<string> lines)
         {
-            StringBuilder sb = new StringBuilder();
-            foreach (var line in lines)
+            using (FileStream fs = new FileStream(filename, FileMode.Append, FileAccess.Write))
             {
-                sb.AppendLine(line);
+                using (StreamWriter sw = new StreamWriter(fs))
+                {
+                    foreach(string line in lines)
+                    {
+                        sw.WriteLine(line);
+                    }
+                }
             }
 
-            System.IO.File.WriteAllText(filename, sb.ToString());
+            //StringBuilder sb = new StringBuilder();
+            //foreach (var line in lines)
+            //{
+            //    sb.AppendLine(line);
+            //}
+
+            //System.IO.File.WriteAllText(filename, sb.ToString());
         }
     }
 }

@@ -27,14 +27,14 @@ namespace LivesteamScrapper.Models
 
         public EnvironmentModel()
         {
-            Http = "";
-            Selector = "";
-            ChatContainer = By.TagName("");
-            MessageContainer = By.TagName("");
-            MessageAuthor = By.TagName("");
-            MessageContent = By.TagName("");
-            CounterContainer = By.TagName("");
-            GameContainer = By.TagName("");
+            Http = string.Empty;
+            Selector = string.Empty;
+            ChatContainer = By.TagName(string.Empty);
+            MessageContainer = By.TagName(string.Empty);
+            MessageAuthor = By.TagName(string.Empty);
+            MessageContent = By.TagName(string.Empty);
+            CounterContainer = By.TagName(string.Empty);
+            GameContainer = By.TagName(string.Empty);
         }
 
         public static EnvironmentModel CreateEnvironment(string website = "")

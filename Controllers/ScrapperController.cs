@@ -18,11 +18,16 @@ namespace LivesteamScrapper.Controllers
         private ChromeDriver? browser;
         private string lastMessage = "";
 
+        public string Website { get; set; }
+        public string Livestream { get; set; }
+
         //Constructor
-        public ScrapperController(ILogger<Controller> logger, EnvironmentModel environment)
+        public ScrapperController(ILogger<Controller> logger, EnvironmentModel environment, string website, string livestream)
         {
             _logger = logger;
             this.environment = environment;
+            Website = website;
+            Livestream = livestream;
         }
         //Finalizer
         ~ScrapperController()
@@ -33,12 +38,12 @@ namespace LivesteamScrapper.Controllers
             }
         }
 
-        public void OpenBrowserPage(string path)
+        public void OpenBrowserPage()
         {
             try
             {
                 lastMessage = "";
-                string fullUrl = environment.Http + path;
+                string fullUrl = environment.Http + Livestream;
                 if (browser == null || browser.Url != fullUrl)
                 {
                     //Returns a new BrowserPage
@@ -62,18 +67,18 @@ namespace LivesteamScrapper.Controllers
             }
         }
 
-        public List<ChatMessageModel> ReadChat()
+        public (List<ChatMessageModel>, int lastIndex) ReadChat()
         {
             //Verify if is already scrapping and return case not
             if (IsScrapping)
             {
-                return new List<ChatMessageModel>();
+                return (new List<ChatMessageModel>(), 0);
             }
             //Verify if the browser is already open with a page
             if (browser == null)
             {
                 ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.NotReady);
-                return new List<ChatMessageModel>();
+                return (new List<ChatMessageModel>(), 0);
             }
 
             try
@@ -120,12 +125,12 @@ namespace LivesteamScrapper.Controllers
                 ConsoleController.Chat.MessagesFound = scrapeMessages.Count;
 
                 //Limits the return list based on the lastmessage found
-                int index = -1;
+                int lastIndex = -1;
                 List<ChatMessageModel> returnMessages;
 
                 if(!string.IsNullOrEmpty(lastMessage) && scrapeMessages.Count > 0)
                 {
-                    index = scrapeMessages.FindLastIndex(item => string.Concat(item.Author, " - ", item.Content) == lastMessage);
+                    lastIndex = scrapeMessages.FindLastIndex(item => string.Concat(item.Author, " - ", item.Content) == lastMessage);
                     lastMessage = string.Concat(scrapeMessages.Last().Author, " - ", scrapeMessages.Last().Content);
                 }
                 else if(scrapeMessages.Count > 0)
@@ -133,9 +138,9 @@ namespace LivesteamScrapper.Controllers
                     lastMessage = string.Concat(scrapeMessages.Last().Author, " - ", scrapeMessages.Last().Content);
                 }
 
-                if (scrapeMessages.Count > 0 && scrapeMessages.Count - 1 != index)
+                if (scrapeMessages.Count > 0 && scrapeMessages.Count - 1 != lastIndex)
                 {
-                    returnMessages = scrapeMessages.GetRange(index + 1, scrapeMessages.Count - (index + 1));
+                    returnMessages = scrapeMessages.GetRange(lastIndex + 1, scrapeMessages.Count - (lastIndex + 1));
                 }
                 else
                 {
@@ -146,12 +151,12 @@ namespace LivesteamScrapper.Controllers
                 {
                     ConsoleController.Chat.LastMessage = lastMessage;
                 }
-                return returnMessages;
+                return (returnMessages, lastIndex);
             }
             catch (Exception e)
             {
                 ConsoleController.ShowExceptionLog(e.Message);
-                return new List<ChatMessageModel>();
+                return (new List<ChatMessageModel>(), 0);
             }
             finally
             {
