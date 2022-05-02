@@ -5,6 +5,7 @@ using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
 using SeleniumExtras.WaitHelpers;
 using System.Collections.Concurrent;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace LivesteamScrapper.Controllers
@@ -28,6 +29,8 @@ namespace LivesteamScrapper.Controllers
             this.environment = environment;
             Website = website;
             Livestream = livestream;
+
+            OpenBrowserPage();
         }
         //Finalizer
         ~ScrapperController()
@@ -63,7 +66,11 @@ namespace LivesteamScrapper.Controllers
             catch (Exception e)
             {
                 ConsoleController.ShowExceptionLog(e.Message);
-                throw;
+                ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.NotReady);
+                if (browser != null)
+                {
+                    browser.Dispose();
+                }
             }
         }
 
@@ -78,7 +85,7 @@ namespace LivesteamScrapper.Controllers
             if (browser == null)
             {
                 ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.NotReady);
-                return (new List<ChatMessageModel>(), 0);
+                throw new ArgumentNullException("browser is null");
             }
 
             try
@@ -99,7 +106,7 @@ namespace LivesteamScrapper.Controllers
                     {
                         messageAuthor = message.FindElement(environment.MessageAuthor).Text;
                     }
-                    catch 
+                    catch
                     {
                         messageAuthor = "";
                     }
@@ -113,7 +120,7 @@ namespace LivesteamScrapper.Controllers
                         messageContent = "";
                     }
 
-                    if(!string.IsNullOrEmpty(messageAuthor))
+                    if (!string.IsNullOrEmpty(messageAuthor))
                     {
                         newMessage.Author = messageAuthor;
                         newMessage.Content = messageContent;
@@ -121,21 +128,21 @@ namespace LivesteamScrapper.Controllers
                         scrapeMessages.Add(newMessage);
                     }
                 }
-                
+
                 ConsoleController.Chat.MessagesFound = scrapeMessages.Count;
 
                 //Limits the return list based on the lastmessage found
                 int lastIndex = -1;
                 List<ChatMessageModel> returnMessages;
 
-                if(!string.IsNullOrEmpty(lastMessage) && scrapeMessages.Count > 0)
+                if (!string.IsNullOrEmpty(lastMessage) && scrapeMessages.Count > 0)
                 {
-                    lastIndex = scrapeMessages.FindLastIndex(item => string.Concat(item.Author, " - ", item.Content) == lastMessage);
-                    lastMessage = string.Concat(scrapeMessages.Last().Author, " - ", scrapeMessages.Last().Content);
+                    lastIndex = scrapeMessages.FindLastIndex(item => string.Concat(item.Author, ",", item.Content) == lastMessage);
+                    lastMessage = string.Concat(scrapeMessages.Last().Author, ",", scrapeMessages.Last().Content);
                 }
-                else if(scrapeMessages.Count > 0)
+                else if (scrapeMessages.Count > 0)
                 {
-                    lastMessage = string.Concat(scrapeMessages.Last().Author, " - ", scrapeMessages.Last().Content);
+                    lastMessage = string.Concat(scrapeMessages.Last().Author, ",", scrapeMessages.Last().Content);
                 }
 
                 if (scrapeMessages.Count > 0 && scrapeMessages.Count - 1 != lastIndex)
@@ -147,7 +154,7 @@ namespace LivesteamScrapper.Controllers
                     returnMessages = new List<ChatMessageModel>();
                 }
 
-                if(!string.IsNullOrEmpty(lastMessage))
+                if (!string.IsNullOrEmpty(lastMessage))
                 {
                     ConsoleController.Chat.LastMessage = lastMessage;
                 }
@@ -170,7 +177,7 @@ namespace LivesteamScrapper.Controllers
             if (browser == null)
             {
                 ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.NotReady);
-                return null;
+                throw new ArgumentNullException("browser is null");
             }
             try
             {
@@ -200,7 +207,7 @@ namespace LivesteamScrapper.Controllers
             if (browser == null)
             {
                 ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.NotReady);
-                return null;
+                throw new ArgumentNullException("browser is null");
             }
             try
             {
@@ -216,6 +223,213 @@ namespace LivesteamScrapper.Controllers
                 ConsoleController.ShowExceptionLog(e.Message);
                 return null;
             }
+        }
+
+        public Task RunViewerGameScrapper(int timeInMinutes)
+        {
+            //Controllers
+            TimerController timerController = new TimerController(_logger, "RunViewerScrapper");
+
+            //Loop scrapping per sec.
+            timerController.StartTimer();
+
+            double totalMsec = timeInMinutes * 60000;
+            double waitMilliseconds = 60000;
+
+            List<string> listCounter = new List<string>();
+
+            while (totalMsec > 0)
+            {
+                DateTime start = DateTime.Now;
+
+                //Local variables
+                int? counter = this.ReadViewerCounter();
+                string? currentGame = this.ReadCurrentGame();
+
+                if (counter.HasValue && !string.IsNullOrEmpty(currentGame))
+                {
+                    listCounter.Add(string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", currentGame, ",", counter.Value.ToString()));
+                }
+
+                //Each 100 records is transfered to the csv file
+                if (listCounter.Count > 100)
+                {
+                    Task.Run(() =>
+                    {
+                        Write(listCounter, this.Website, this.Livestream, "counters");
+                        listCounter = new List<string>();
+                    });
+                }
+
+                //Timer e sleep control
+                TimeSpan timeSpan = DateTime.Now - start;
+                if (timeSpan.TotalMilliseconds < waitMilliseconds)
+                {
+                    Thread.Sleep((int)(waitMilliseconds - timeSpan.TotalMilliseconds));
+                }
+
+                totalMsec -= (DateTime.Now - start).TotalMilliseconds;
+            }
+
+            //Send to file the rest of counter lines
+            Task.Run(() =>
+            {
+                if (listCounter.Count > 0)
+                {
+                    Write(listCounter, this.Website, this.Livestream, "counters");
+                }
+            });
+
+            timerController.StopTimer();
+
+            return Task.CompletedTask;
+        }
+
+        public Task RunChatScrapper(int timeInMinutes)
+        {
+            //Controllers
+            TimerController timerController = new TimerController(_logger, "RunChatScrapper");
+
+            //Variables
+            List<ChatMessageModel> chatMessages = new List<ChatMessageModel>();
+            Dictionary<string, string> chatInteractions = new Dictionary<string, string>();
+
+            //Loop scrapping per sec.
+            timerController.StartTimer();
+
+            double totalMsec = timeInMinutes * 60000;
+            double waitMilliseconds = 1000;
+
+            while (totalMsec > 0)
+            {
+                DateTime start = DateTime.Now;
+
+                //Local variables
+                (List<ChatMessageModel> currentMessages, int lastIndex) = this.ReadChat();
+                chatMessages.AddRange(currentMessages);
+
+                //Timer e sleep control
+                TimeSpan timeSpan = DateTime.Now - start;
+                if (timeSpan.TotalMilliseconds < waitMilliseconds)
+                {
+                    Thread.Sleep((int)(waitMilliseconds - timeSpan.TotalMilliseconds));
+                }
+
+                if (chatMessages.Count > 0)
+                {
+                    //Get message counter for each viewer
+                    Task.Run(() =>
+                    {
+                        foreach (var author in chatMessages.Select(chatMessages => chatMessages.Author))
+                        {
+                            if (chatInteractions.ContainsKey(author))
+                            {
+                                chatInteractions[author] = IncrementStringNumber(chatInteractions[author]);
+                            }
+                            else
+                            {
+                                chatInteractions.TryAdd(author, "1");
+                            }
+                        }
+                    });
+
+                    //Save all messages and reset
+                    Task.Run(() =>
+                    {
+                        List<string> messages = new List<string>();
+                        foreach (var item in chatMessages)
+                        {
+                            messages.Add(string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", item.Author, ",", item.Content));
+                        }
+                        Write(messages, this.Website, this.Livestream, "messages");
+                        chatMessages = new List<ChatMessageModel>();
+                    });
+                }
+
+                totalMsec -= (DateTime.Now - start).TotalMilliseconds;
+            }
+
+            timerController.StopTimer();
+
+            //Tranfere para arquivo ao final caso tenha sobrado
+            if (chatMessages.Count > 0)
+            {
+                //Get message counter for each viewer
+                Task.Run(() =>
+                {
+                    foreach (var author in chatMessages.Select(chatMessages => chatMessages.Author))
+                    {
+                        if (chatInteractions.ContainsKey(author))
+                        {
+                            chatInteractions[author] = IncrementStringNumber(chatInteractions[author]);
+                        }
+                        else
+                        {
+                            chatInteractions.TryAdd(author, "1");
+                        }
+                    }
+                });
+
+                //Save all remaining messages
+                Task.Run(() =>
+                {
+                    List<string> messages = new List<string>();
+                    foreach (var item in chatMessages)
+                    {
+                        messages.Add(string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", item.Author, ",", item.Content));
+                    }
+                    Write(messages, this.Website, this.Livestream, "messages");
+                });
+            }
+
+            //Process interactions
+            List<string> fileLines = chatInteractions.SelectMany(kvp => kvp.Value.Select(val => $"{kvp.Key},{val}")).ToList();
+            Write(fileLines, this.Website, this.Livestream, "viewers", true);
+
+            return Task.CompletedTask;
+        }
+
+        public string IncrementStringNumber(string str)
+        {
+            string strNew = "";
+            if (!string.IsNullOrEmpty(str) && int.TryParse(str, out int num))
+            {
+                num++;
+                strNew = num.ToString();
+            }
+            return strNew;
+        }
+
+        public void Write(List<string> lines, string website, string livestream, string type, bool startNew = false)
+        {
+            string file = $"{GetUntilSpecial(website.ToLower())}-{GetUntilSpecial(livestream.ToLower())}-{type}.csv";
+
+            if (startNew)
+            {
+                FileController.WriteCsv(file, lines);
+            }
+            else
+            {
+                FileController.UpdateCsv(file, lines);
+            }
+        }
+
+        public string GetUntilSpecial(string text)
+        {
+            //Get until a special character appear
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < text.Length; i++)
+            {
+                if ((text[i] >= '0' && text[i] <= '9') || (text[i] >= 'A' && text[i] <= 'Z') || (text[i] >= 'a' && text[i] <= 'z') || text[i] == '.' || text[i] == '_')
+                {
+                    sb.Append(text[i]);
+                }
+                else
+                {
+                    break;
+                }
+            }
+            return sb.ToString();
         }
     }
 }

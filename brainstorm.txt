@@ -1,4 +1,2 @@
- - Separar a funcionalidade de contagem de mensagens em uma outra função.
- - Criar uma funcionalidade para preencher uma lista de mensagens com as mensagens capturadas em um arquivo CSV em bat de cem em cem mensagens. (Para isso é necessário ver como atualizar um arquivo CSV em vez de só escrever)
  - Expandir sistema para outras plataformas
  - Criar interface de webapp que receba uma data de inicio, uma data de fim e execute de acordo com esses parâmetros, tenha um botão de iniciar e finalizar e depois consiga ler os arquivos criados ou criar visualizações relevantes.
