@@ -16,11 +16,13 @@ namespace LivesteamScrapper.Controllers
 
         public IActionResult Index()
         {
-            ScrapperController scrapper = CreateScrapper("booyah", "vanquilha");
-            int minutes = 10;
-            Task.Run(() => RunViewerScrapper(scrapper, minutes));
-            Task.Run(() => RunChatScrapper(scrapper, minutes));
+            //Start tasks
+            List<Task> tasks = StartScrapper("booyah", "vanquilha", 1);
+
+            //Console Tasks
             Task.Run(() => ConsoleController.StartConsole(30));
+            Task.Run(() => { Task.WaitAll(tasks.ToArray()); ConsoleController.StopConsole(); });
+
             return View();
         }
 
@@ -33,6 +35,15 @@ namespace LivesteamScrapper.Controllers
         public IActionResult Error()
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        }
+
+        public List<Task> StartScrapper(string site, string channel, int minutes)
+        {
+            ScrapperController scrapper = CreateScrapper(site, channel);
+            List<Task> tasks = new List<Task>();
+            tasks.Add(Task.Run(() => RunViewerGameScrapper(scrapper, minutes)));
+            tasks.Add(Task.Run(() => RunChatScrapper(scrapper, minutes)));
+            return tasks;
         }
 
         /// <summary>
@@ -58,7 +69,7 @@ namespace LivesteamScrapper.Controllers
         /// </summary>
         /// <param name="scrapperController"></param>
         /// <returns></returns>
-        public Task RunViewerScrapper(ScrapperController scrapperController, int timeInMinutes)
+        public Task RunViewerGameScrapper(ScrapperController scrapperController, int timeInMinutes)
         {
             //Controllers
             TimerController timerController = new TimerController(_logger, "RunViewerScrapper");
@@ -70,21 +81,22 @@ namespace LivesteamScrapper.Controllers
             //Loop scrapping per sec.
             timerController.StartTimer();
 
-            double milliseconds = timeInMinutes * 60000;
+            double totalMsec = timeInMinutes * 60000;
             double waitMilliseconds = 5000;
 
             List<string> listCounter = new List<string>();
 
-            while (milliseconds > 0)
+            while (totalMsec > 0)
             {
                 DateTime start = DateTime.Now;
 
                 //Local variables
                 int? counter = scrapperController.ReadViewerCounter();
+                string? currentGame = scrapperController.ReadCurrentGame();
 
-                if (counter.HasValue)
+                if (counter.HasValue && !string.IsNullOrEmpty(currentGame))
                 {
-                    listCounter.Add(counter.Value.ToString());
+                    listCounter.Add(string.Concat(currentGame, " - ", counter.Value.ToString()));
                 }
 
                 //Get highest viwercount
@@ -100,7 +112,7 @@ namespace LivesteamScrapper.Controllers
                     Thread.Sleep((int)(waitMilliseconds - timeSpan.TotalMilliseconds));
                 }
 
-                milliseconds -= timeSpan.TotalMilliseconds;
+                totalMsec -= (DateTime.Now - start).TotalMilliseconds;
             }
 
             fileController.WriteToCsv("count.csv", listCounter);
@@ -126,10 +138,10 @@ namespace LivesteamScrapper.Controllers
             //Loop scrapping per sec.
             timerController.StartTimer();
 
-            double milliseconds = timeInMinutes * 60000;
+            double totalMsec = timeInMinutes * 60000;
             double waitMilliseconds = 5000;
 
-            while (milliseconds > 0)
+            while (totalMsec > 0)
             {
                 DateTime start = DateTime.Now;
 
@@ -156,7 +168,7 @@ namespace LivesteamScrapper.Controllers
                     Thread.Sleep((int)(waitMilliseconds - timeSpan.TotalMilliseconds));
                 }
 
-                milliseconds -= timeSpan.TotalMilliseconds;
+                totalMsec -= (DateTime.Now - start).TotalMilliseconds;
             }
 
             List<string> fileLines = chatInteractions.SelectMany(kvp => kvp.Value.Select(val => $"{kvp.Key} : {val}")).ToList();

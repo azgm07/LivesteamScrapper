@@ -188,5 +188,29 @@ namespace LivesteamScrapper.Controllers
                 return null;
             }
         }
+
+        public string? ReadCurrentGame()
+        {
+            //Verify if the browser is already open with a page
+            if (browser == null)
+            {
+                ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.NotReady);
+                return null;
+            }
+            try
+            {
+                //Retrive new comments
+                var game = browser.FindElement(environment.GameContainer);
+                string currentGame = game.GetAttribute("textContent");
+
+                ConsoleController.CurrentGame.Name = currentGame;
+                return currentGame;
+            }
+            catch (Exception e)
+            {
+                ConsoleController.ShowExceptionLog(e.Message);
+                return null;
+            }
+        }
     }
 }

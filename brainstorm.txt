@@ -1,5 +1,3 @@
- - Fazer um ConsoleController para armazenar mensagens padrão em um dicionário e disparar dado um tempo prédeterminado para manter o formato.
- - Fazer função para capturar nome do jogo.
  - Separar a funcionalidade de contagem de mensagens em uma outra função.
  - Criar uma funcionalidade para preencher uma lista de mensagens com as mensagens capturadas em um arquivo CSV em bat de cem em cem mensagens. (Para isso é necessário ver como atualizar um arquivo CSV em vez de só escrever)
  - Expandir sistema para outras plataformas

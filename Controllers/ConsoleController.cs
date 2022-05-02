@@ -8,31 +8,34 @@ namespace LivesteamScrapper.Controllers
     {
         //private static readonly ILogger<Controller> _logger;
 
-        private static bool isRunning = false;
+        private static bool IsRunning;
 
         private static string lineBreak = "------------------------------";
 
         public static ChatConsole Chat { get; set; } = new ChatConsole();
         public static ViewersConsole Viewers { get; set; } = new ViewersConsole();
-        public static GameConsole Game { get; set; } = new GameConsole();
+        public static GameConsole CurrentGame { get; set; } = new GameConsole();
 
         public static Task StartConsole(int delaySeconds = 30)
         {
-            isRunning = true;
-            while (isRunning)
+            Console.WriteLine(string.Concat("\n", "Console Started ", lineBreak, "\n"));
+            IsRunning = true;
+            Thread.Sleep(delaySeconds * 1000);
+            while (IsRunning)
             {
-                Thread.Sleep(delaySeconds * 1000);
                 ShowGameLog();
                 ShowViewersLog();
                 ShowChatLog();
                 Console.WriteLine(lineBreak);
+                Thread.Sleep(delaySeconds * 1000);
             }
             return Task.CompletedTask;
         }
 
         public static void StopConsole()
         {
-            isRunning = false;
+            Console.WriteLine(string.Concat("\n", "Console Stopped ", lineBreak, "\n"));
+            IsRunning = false;
         }
 
         private static void ShowChatLog()
@@ -60,7 +63,7 @@ namespace LivesteamScrapper.Controllers
         private static void ShowGameLog()
         {
 
-            GameConsole gameConsole = Game;
+            GameConsole gameConsole = CurrentGame;
             if (!string.IsNullOrEmpty(gameConsole.Name))
             {
                 Console.WriteLine($"Playing: {gameConsole.Name}");
@@ -94,11 +97,10 @@ namespace LivesteamScrapper.Controllers
             switch (browserLog)
             {
                 case EnumsModel.BrowserLog.Ready:
-                    Console.WriteLine($"|Browser| : Page is ready");
-                    Console.WriteLine(lineBreak);
+                    Console.WriteLine($"\n|Browser| : Page is ready\n");
                     break;
                 case EnumsModel.BrowserLog.NotReady:
-                    Console.WriteLine($"|Browser| : Page is not ready");
+                    Console.WriteLine($"\n|Browser| : Page is not ready\n");
                     Console.WriteLine(lineBreak);
                     break;
                 default:
@@ -108,9 +110,7 @@ namespace LivesteamScrapper.Controllers
 
         public static void ShowExceptionLog(string message)
         {
-            Console.WriteLine(lineBreak);
-            Console.WriteLine($"|Exception| : {message}");
-            Console.WriteLine(lineBreak);
+            Console.WriteLine($"\n|Exception| : {message}\n");
         }
     }
 }

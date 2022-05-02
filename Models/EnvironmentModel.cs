@@ -11,6 +11,7 @@ namespace LivesteamScrapper.Models
         public abstract By MessageAuthor { get; set; }
         public abstract By MessageContent { get; set; }
         public abstract By CounterContainer { get; set; }
+        public abstract By GameContainer { get; set; }
     }
 
     public class EnvironmentModel: IEnvironmentInterface
@@ -22,16 +23,18 @@ namespace LivesteamScrapper.Models
         public By MessageAuthor { get; set; }
         public By MessageContent { get; set; }
         public By CounterContainer { get; set; }
+        public By GameContainer { get; set; }
 
         public EnvironmentModel()
         {
             Http = "";
             Selector = "";
-            ChatContainer = By.TagName("body");
-            MessageContainer = By.TagName("body");
-            MessageAuthor = By.TagName("body");
-            MessageContent = By.TagName("body");
-            CounterContainer = By.TagName("body");
+            ChatContainer = By.TagName("");
+            MessageContainer = By.TagName("");
+            MessageAuthor = By.TagName("");
+            MessageContent = By.TagName("");
+            CounterContainer = By.TagName("");
+            GameContainer = By.TagName("");
         }
 
         public static EnvironmentModel CreateEnvironment(string website = "")
@@ -56,6 +59,7 @@ namespace LivesteamScrapper.Models
             MessageAuthor = By.CssSelector("div > div > span.components-chatbox-user-menu > span");
             MessageContent = By.CssSelector("div > div > span.message-text");
             CounterContainer = By.CssSelector("#layout-content > div > div > div.channel-top-bar > div > div.components-profile-card-center.only-center > div.channel-infos > span > span");
+            GameContainer = By.CssSelector("#layout-content > div > div > div.channel-top-bar > div > div.components-profile-card-center.only-center > div.channel-infos > div > span > a");
         }
     }
 }
