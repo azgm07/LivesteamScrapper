@@ -52,12 +52,12 @@ namespace LivesteamScrapper.Controllers
                     WebDriverWait wait = new WebDriverWait(browser, TimeSpan.FromSeconds(10));
                     browser.Navigate().GoToUrl(fullUrl);
                     wait.Until(ExpectedConditions.ElementExists(By.ClassName(environment.Selector)));
-                    Console.WriteLine("Page is ready");
+                    ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.Ready);
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                ConsoleController.ShowExceptionLog(e.Message);
                 throw;
             }
         }
@@ -72,7 +72,7 @@ namespace LivesteamScrapper.Controllers
             //Verify if the browser is already open with a page
             if (browser == null)
             {
-                Console.WriteLine("Page not open");
+                ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.NotReady);
                 return new List<ChatMessageModel>();
             }
 
@@ -117,7 +117,7 @@ namespace LivesteamScrapper.Controllers
                     }
                 }
                 
-                Console.WriteLine($"Messages found: {scrapeMessages.Count}");
+                ConsoleController.Chat.MessagesFound = scrapeMessages.Count;
 
                 //Limits the return list based on the lastmessage found
                 int index = -1;
@@ -125,21 +125,12 @@ namespace LivesteamScrapper.Controllers
 
                 if(!string.IsNullOrEmpty(lastMessage) && scrapeMessages.Count > 0)
                 {
-                    index = scrapeMessages.FindLastIndex(item => string.Concat(item.Author, " - ", item.Content) == lastMessage);                  
-                    Console.WriteLine($"Last message index: {index + 1}");
-                    Console.WriteLine($"Last message found: {lastMessage}");
-                    lastMessage = string.Concat(scrapeMessages[scrapeMessages.Count - 1].Author, " - ", scrapeMessages[scrapeMessages.Count - 1].Content);
+                    index = scrapeMessages.FindLastIndex(item => string.Concat(item.Author, " - ", item.Content) == lastMessage);
+                    lastMessage = string.Concat(scrapeMessages.Last().Author, " - ", scrapeMessages.Last().Content);
                 }
                 else if(scrapeMessages.Count > 0)
                 {
-                    Console.WriteLine($"Last message index: {index + 1}");
-                    Console.WriteLine($"Last message found: {lastMessage}");
-                    lastMessage = string.Concat(scrapeMessages[scrapeMessages.Count - 1].Author, " - ", scrapeMessages[scrapeMessages.Count - 1].Content);
-                }
-                else
-                {
-                    Console.WriteLine($"Last message index: {index + 1}");
-                    Console.WriteLine($"Last message found: {lastMessage}");
+                    lastMessage = string.Concat(scrapeMessages.Last().Author, " - ", scrapeMessages.Last().Content);
                 }
 
                 if (scrapeMessages.Count > 0 && scrapeMessages.Count - 1 != index)
@@ -150,13 +141,16 @@ namespace LivesteamScrapper.Controllers
                 {
                     returnMessages = new List<ChatMessageModel>();
                 }
-                
-                Console.WriteLine($"Return count: {returnMessages.Count}");
+
+                if(!string.IsNullOrEmpty(lastMessage))
+                {
+                    ConsoleController.Chat.LastMessage = lastMessage;
+                }
                 return returnMessages;
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                ConsoleController.ShowExceptionLog(e.Message);
                 return new List<ChatMessageModel>();
             }
             finally
@@ -170,13 +164,13 @@ namespace LivesteamScrapper.Controllers
             //Verify if the browser is already open with a page
             if (browser == null)
             {
-                Console.WriteLine("Page not open");
+                ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.NotReady);
                 return null;
             }
             try
             {
                 //Retrive new comments
-                int? viewersCount = null;
+                int viewersCount = 0;
                 var counter = browser.FindElement(environment.CounterContainer);
                 string counterText = counter.GetAttribute("textContent");
                 counterText = Regex.Replace(counterText, "[^0-9]", "");
@@ -185,12 +179,12 @@ namespace LivesteamScrapper.Controllers
                     viewersCount = result;
                 }
 
-                Console.WriteLine($"\nCount: {viewersCount}\n");
+                ConsoleController.Viewers.Count = viewersCount;
                 return viewersCount;
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                ConsoleController.ShowExceptionLog(e.Message);
                 return null;
             }
         }

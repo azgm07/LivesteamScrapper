@@ -16,10 +16,11 @@ namespace LivesteamScrapper.Controllers
 
         public IActionResult Index()
         {
-            ScrapperController scrapper = CreateScrapper("booyah", "pelegrino1993");
+            ScrapperController scrapper = CreateScrapper("booyah", "vanquilha");
             int minutes = 10;
             Task.Run(() => RunViewerScrapper(scrapper, minutes));
             Task.Run(() => RunChatScrapper(scrapper, minutes));
+            Task.Run(() => ConsoleController.StartConsole(30));
             return View();
         }
 
@@ -60,14 +61,14 @@ namespace LivesteamScrapper.Controllers
         public Task RunViewerScrapper(ScrapperController scrapperController, int timeInMinutes)
         {
             //Controllers
-            TimerController timerController = new TimerController(_logger);
+            TimerController timerController = new TimerController(_logger, "RunViewerScrapper");
             FileController fileController = new FileController(_logger);
 
             //Variables
             int highestViewerCount = 0;
 
             //Loop scrapping per sec.
-            Console.WriteLine($"Viewer Start time: {timerController.StartTimer()}");
+            timerController.StartTimer();
 
             double milliseconds = timeInMinutes * 60000;
             double waitMilliseconds = 5000;
@@ -100,12 +101,10 @@ namespace LivesteamScrapper.Controllers
                 }
 
                 milliseconds -= timeSpan.TotalMilliseconds;
-
-                //Console.WriteLine($"Viewer Lap count: {timerController.LapCount} - Lap timer: {timerController.GetTimerLap()}");
             }
 
             fileController.WriteToCsv("count.csv", listCounter);
-            Console.WriteLine($"Viewer Stop time: {timerController.StopTimer()}");
+            timerController.StopTimer();
 
             return Task.CompletedTask;
         }
@@ -118,14 +117,14 @@ namespace LivesteamScrapper.Controllers
         public Task RunChatScrapper(ScrapperController scrapperController, int timeInMinutes)
         {
             //Controllers
-            TimerController timerController = new TimerController(_logger);
+            TimerController timerController = new TimerController(_logger, "RunChatScrapper");
             FileController fileController = new FileController(_logger);
 
             //Variables
             Dictionary<string, string> chatInteractions = new Dictionary<string, string>();
 
             //Loop scrapping per sec.
-            Console.WriteLine($"\nChat Start time: {timerController.StartTimer()}");
+            timerController.StartTimer();
 
             double milliseconds = timeInMinutes * 60000;
             double waitMilliseconds = 5000;
@@ -158,14 +157,12 @@ namespace LivesteamScrapper.Controllers
                 }
 
                 milliseconds -= timeSpan.TotalMilliseconds;
-
-                Console.WriteLine($"\nChat Lap count: {timerController.LapCount} - Lap timer: {timerController.GetTimerLap()}");
             }
 
             List<string> fileLines = chatInteractions.SelectMany(kvp => kvp.Value.Select(val => $"{kvp.Key} : {val}")).ToList();
 
             fileController.WriteToCsv("chat.csv", fileLines);
-            Console.WriteLine($"\nChat Stop time: {timerController.StopTimer()}");
+            timerController.StopTimer();
 
             return Task.CompletedTask;
         }

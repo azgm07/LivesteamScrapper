@@ -4,88 +4,113 @@ using System.Text;
 
 namespace LivesteamScrapper.Controllers
 {
-    public class ConsoleController : Controller
+    public static class ConsoleController
     {
-        private readonly ILogger<Controller> _logger;
-        private bool isRunning;
+        //private static readonly ILogger<Controller> _logger;
 
-        public static ChatConsole? Chat { get; set; }
-        public static ViewersConsole? Viewers { get; set; }
-        public static GameConsole? Game { get; set; }
+        private static bool isRunning = false;
 
-        public ConsoleController(ILogger<Controller> logger)
-        {
-            _logger = logger;
-        }
+        private static string lineBreak = "------------------------------";
 
-        public Task StartConsole(int delaySeconds = 5)
+        public static ChatConsole Chat { get; set; } = new ChatConsole();
+        public static ViewersConsole Viewers { get; set; } = new ViewersConsole();
+        public static GameConsole Game { get; set; } = new GameConsole();
+
+        public static Task StartConsole(int delaySeconds = 30)
         {
             isRunning = true;
             while (isRunning)
             {
-                Console.WriteLine();
-                ShowViewersLog();
-                Console.WriteLine();
-                ShowChatLog();
-                Console.WriteLine();
-                ShowGameLog();
-                Console.WriteLine();
                 Thread.Sleep(delaySeconds * 1000);
+                ShowGameLog();
+                ShowViewersLog();
+                ShowChatLog();
+                Console.WriteLine(lineBreak);
             }
             return Task.CompletedTask;
         }
 
-        public void StopConsole()
+        public static void StopConsole()
         {
             isRunning = false;
         }
 
-        private void ShowChatLog()
+        private static void ShowChatLog()
         {
-            if(Chat != null)
+            ChatConsole chatConsole = Chat;
+            if (chatConsole.MessagesFound != -1)
             {
-                ChatConsole chatConsole = Chat;
-                if (chatConsole.MessagesFound.HasValue)
-                {
-                    Console.WriteLine($"Messages found in page: {chatConsole.MessagesFound}");
-                }
-                if (string.IsNullOrEmpty(chatConsole.LastMessage))
-                {
-                    Console.WriteLine($"Last message found: {chatConsole.LastMessage}");
-                }
-                if (chatConsole.LastMessageIndex.HasValue)
-                {
-                    Console.WriteLine($"Last message index: {chatConsole.LastMessageIndex}");
-                }
-                if (chatConsole.NewMessages.HasValue)
-                {
-                    Console.WriteLine($"New messages found: {chatConsole.NewMessages}");
-                }
+                Console.WriteLine($"Messages found in page: {chatConsole.MessagesFound}");
+            }
+            if (!string.IsNullOrEmpty(chatConsole.LastMessage))
+            {
+                Console.WriteLine($"Last message found: {chatConsole.LastMessage}");
             }
         }
 
-        private void ShowViewersLog()
+        private static void ShowViewersLog()
         {
-            if (Viewers != null)
+            ViewersConsole viewersConsole = Viewers;
+            if (viewersConsole.Count != -1)
             {
-                ViewersConsole viewersConsole = Viewers;
-                if (viewersConsole.Count.HasValue)
-                {
-                    Console.WriteLine($"Viewers Count: {viewersConsole.Count}");
-                }
+                Console.WriteLine($"Viewers Count: {viewersConsole.Count}");
             }
         }
 
-        private void ShowGameLog()
+        private static void ShowGameLog()
         {
-            if (Game != null)
+
+            GameConsole gameConsole = Game;
+            if (!string.IsNullOrEmpty(gameConsole.Name))
             {
-                GameConsole gameConsole = Game;
-                if (string.IsNullOrEmpty(gameConsole.Name))
-                {
-                    Console.WriteLine($"Playing: {gameConsole.Name}");
-                }
+                Console.WriteLine($"Playing: {gameConsole.Name}");
             }
+
+        }
+
+        public static void ShowTimerLog(EnumsModel.TimerLog timerLog, TimerController timerController)
+        {
+            switch (timerLog)
+            {
+                case EnumsModel.TimerLog.Start:
+                    Console.WriteLine($"|{timerController.From}| Start time: {timerController.StartTime}");
+                    Console.WriteLine(lineBreak);
+                    break;
+                case EnumsModel.TimerLog.Stop:
+                    Console.WriteLine($"|{timerController.From}| Stop time: {timerController.StopTime}");
+                    Console.WriteLine(lineBreak);
+                    break;
+                case EnumsModel.TimerLog.Lap:
+                    Console.WriteLine($"|{timerController.From}| Lap count: {timerController.LapCount} - Lap timer: {timerController.LapTimer}");
+                    Console.WriteLine(lineBreak);
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        public static void ShowBrowserLog(EnumsModel.BrowserLog browserLog)
+        {
+            switch (browserLog)
+            {
+                case EnumsModel.BrowserLog.Ready:
+                    Console.WriteLine($"|Browser| : Page is ready");
+                    Console.WriteLine(lineBreak);
+                    break;
+                case EnumsModel.BrowserLog.NotReady:
+                    Console.WriteLine($"|Browser| : Page is not ready");
+                    Console.WriteLine(lineBreak);
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        public static void ShowExceptionLog(string message)
+        {
+            Console.WriteLine(lineBreak);
+            Console.WriteLine($"|Exception| : {message}");
+            Console.WriteLine(lineBreak);
         }
     }
 }

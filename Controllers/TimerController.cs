@@ -1,26 +1,31 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using LivesteamScrapper.Models;
+using Microsoft.AspNetCore.Mvc;
 
 namespace LivesteamScrapper.Controllers
 {
     public class TimerController : Controller
     {
-        private DateTime startTime;
-        private DateTime stopTime;
-        private DateTime lapTime;
+        public DateTime StartTime { get; set; }
+        public DateTime StopTime { get; set; }
+        public DateTime LapTime { get; set; }
+
+        public TimeSpan LapTimer { get; set; }
 
         public bool HasStarted { get; private set; }
         public int LapCount { get; private set; }
+        public string From { get; private set; }
 
         private readonly ILogger<Controller> _logger;
 
-        public TimerController(ILogger<Controller> logger)
+        public TimerController(ILogger<Controller> logger, string from)
         {
             _logger = logger;
-            startTime = new DateTime();
-            stopTime = new DateTime();
-            lapTime = new DateTime();
+            StartTime = new DateTime();
+            StopTime = new DateTime();
+            LapTime = new DateTime();
             HasStarted = false;
             LapCount = 1;
+            From = from;
         }
 
         //Start timer
@@ -28,11 +33,12 @@ namespace LivesteamScrapper.Controllers
         {
             if (!HasStarted)
             {
-                startTime = DateTime.Now;
+                StartTime = DateTime.Now;
                 LapCount = 1;
                 HasStarted = true;
             }
-            return startTime;
+            ConsoleController.ShowTimerLog(EnumsModel.TimerLog.Start, this);
+            return StartTime;
         }
 
         //Get the current TimeSpan between start and now
@@ -44,7 +50,7 @@ namespace LivesteamScrapper.Controllers
             }
             else
             {
-                TimeSpan timer = DateTime.Now - startTime;
+                TimeSpan timer = DateTime.Now - StartTime;
                 return timer;
             }
         }
@@ -52,7 +58,6 @@ namespace LivesteamScrapper.Controllers
         //Get the current TimeSpan between last lap and now
         public TimeSpan? GetTimerLap()
         {
-            TimeSpan lapTimer;
             if (!HasStarted)
             {
                 return null;
@@ -62,17 +67,17 @@ namespace LivesteamScrapper.Controllers
                 if (LapCount == 1)
                 {
                     LapCount = 2;
-                    lapTimer = DateTime.Now - startTime;
-                    lapTime = DateTime.Now;
+                    LapTimer = DateTime.Now - StartTime;
+                    LapTime = DateTime.Now;
                 }
                 else
                 {
                     LapCount += 1;
-                    lapTimer = DateTime.Now - lapTime;
-                    lapTime = DateTime.Now;
+                    LapTimer = DateTime.Now - StartTime;
+                    LapTime = DateTime.Now;
                 }
-
-                return lapTimer;
+                ConsoleController.ShowTimerLog(EnumsModel.TimerLog.Lap, this);
+                return LapTimer;
             }
         }
 
@@ -85,9 +90,10 @@ namespace LivesteamScrapper.Controllers
             }
             else
             {
-                stopTime = DateTime.Now;
+                StopTime = DateTime.Now;
                 HasStarted = false;
-                return stopTime;
+                ConsoleController.ShowTimerLog(EnumsModel.TimerLog.Stop, this);
+                return StopTime;
             }
         }
     }
