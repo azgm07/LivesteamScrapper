@@ -54,12 +54,12 @@ namespace LivesteamScrapper.Controllers
                     {
                         //BinaryLocation = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
                     };
-                    options.AddArguments(new List<string>() { "headless", "disable-gpu", "log-level=3" });
+                    options.AddArguments(new List<string>() { "headless", "disable-gpu", "no-sandbox", "window-size=1920,1080", "log-level=3" });
                     browser = new ChromeDriver(options);
 
                     WebDriverWait wait = new WebDriverWait(browser, TimeSpan.FromSeconds(10));
                     browser.Navigate().GoToUrl(fullUrl);
-                    wait.Until(ExpectedConditions.ElementExists(By.ClassName(environment.Selector)));
+                    wait.Until(ExpectedConditions.ElementExists(environment.Selector));
                     ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.Ready);
                 }
             }

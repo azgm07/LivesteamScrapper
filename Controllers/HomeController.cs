@@ -18,7 +18,7 @@ namespace LivesteamScrapper.Controllers
         public IActionResult Index()
         {
             //Start tasks
-            List<Task> tasks = StartScrapper("booyah", "vanquilha", 2);
+            List<Task> tasks = StartScrapper("facebook", "samiraclose/videos/1011779029709268", 2);
 
             //Console Tasks
             Task.Run(() => ConsoleController.StartConsole(30));
