@@ -15,63 +15,22 @@ namespace LivesteamScrapper.Controllers
         private readonly ILogger<Controller> _logger;
         public bool IsScrapping { get; set; }
         public bool IsBrowserOpened { get; set; }
-        public readonly EnvironmentModel environment;
-        private ChromeDriver? browser;
+        public readonly EnvironmentModel _environment;
+        private readonly BrowserController _browserController;
         private string lastMessage = "";
 
-        public string Website { get; set; }
         public string Livestream { get; set; }
 
         //Constructor
-        public ScrapperController(ILogger<Controller> logger, EnvironmentModel environment, string website, string livestream)
+        public ScrapperController(ILogger<Controller> logger, EnvironmentModel environment, string livestream)
         {
             _logger = logger;
-            this.environment = environment;
-            Website = website;
+            _environment = environment;
             Livestream = livestream;
 
-            OpenBrowserPage();
-        }
-        //Finalizer
-        ~ScrapperController()
-        {
-            if (browser != null)
-            {
-                browser.Dispose();
-            }
-        }
-
-        public void OpenBrowserPage()
-        {
-            try
-            {
-                lastMessage = "";
-                string fullUrl = environment.Http + Livestream;
-                if (browser == null || browser.Url != fullUrl)
-                {
-                    //Returns a new BrowserPage
-                    ChromeOptions options = new ChromeOptions()
-                    {
-                        //BinaryLocation = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
-                    };
-                    options.AddArguments(new List<string>() { "headless", "disable-gpu", "no-sandbox", "window-size=1920,1080", "log-level=3" });
-                    browser = new ChromeDriver(options);
-
-                    WebDriverWait wait = new WebDriverWait(browser, TimeSpan.FromSeconds(10));
-                    browser.Navigate().GoToUrl(fullUrl);
-                    wait.Until(ExpectedConditions.ElementExists(environment.Selector));
-                    ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.Ready);
-                }
-            }
-            catch (Exception e)
-            {
-                ConsoleController.ShowExceptionLog(e.Message);
-                ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.NotReady);
-                if (browser != null)
-                {
-                    browser.Dispose();
-                }
-            }
+            //OpenBrowser
+            _browserController = new BrowserController(logger);
+            _browserController.OpenBrowserPage(environment.Http + livestream, environment.Selector);
         }
 
         public (List<ChatMessageModel>, int lastIndex) ReadChat()
@@ -82,7 +41,7 @@ namespace LivesteamScrapper.Controllers
                 return (new List<ChatMessageModel>(), 0);
             }
             //Verify if the browser is already open with a page
-            if (browser == null)
+            if (_browserController.Browser == null)
             {
                 ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.NotReady);
                 throw new ArgumentNullException("browser is null");
@@ -93,8 +52,8 @@ namespace LivesteamScrapper.Controllers
                 IsScrapping = true;
                 //Retrive new comments
                 List<ChatMessageModel> scrapeMessages = new List<ChatMessageModel>();
-                var chat = browser.FindElement(environment.ChatContainer);
-                var messages = chat.FindElements(environment.MessageContainer);
+                var chat = _browserController.Browser.FindElement(_environment.ChatContainer);
+                var messages = chat.FindElements(_environment.MessageContainer);
 
                 //Transform all messages to a list in order
                 foreach (var message in messages)
@@ -104,7 +63,7 @@ namespace LivesteamScrapper.Controllers
 
                     try
                     {
-                        messageAuthor = message.FindElement(environment.MessageAuthor).Text;
+                        messageAuthor = message.FindElement(_environment.MessageAuthor).Text;
                     }
                     catch
                     {
@@ -113,7 +72,7 @@ namespace LivesteamScrapper.Controllers
 
                     try
                     {
-                        messageContent = message.FindElement(environment.MessageContent).Text;
+                        messageContent = message.FindElement(_environment.MessageContent).Text;
                     }
                     catch
                     {
@@ -174,7 +133,7 @@ namespace LivesteamScrapper.Controllers
         public int? ReadViewerCounter()
         {
             //Verify if the browser is already open with a page
-            if (browser == null)
+            if (_browserController.Browser == null)
             {
                 ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.NotReady);
                 throw new ArgumentNullException("browser is null");
@@ -183,7 +142,7 @@ namespace LivesteamScrapper.Controllers
             {
                 //Retrive new comments
                 int viewersCount = 0;
-                var counter = browser.FindElement(environment.CounterContainer);
+                var counter = _browserController.Browser.FindElement(_environment.CounterContainer);
                 string counterText = counter.GetAttribute("textContent");
                 counterText = Regex.Replace(counterText, "[^0-9]", "");
                 if (int.TryParse(counterText, out int result))
@@ -204,7 +163,7 @@ namespace LivesteamScrapper.Controllers
         public string? ReadCurrentGame()
         {
             //Verify if the browser is already open with a page
-            if (browser == null)
+            if (_browserController.Browser == null)
             {
                 ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.NotReady);
                 throw new ArgumentNullException("browser is null");
@@ -212,7 +171,7 @@ namespace LivesteamScrapper.Controllers
             try
             {
                 //Retrive new comments
-                var game = browser.FindElement(environment.GameContainer);
+                var game = _browserController.Browser.FindElement(_environment.GameContainer);
                 string currentGame = game.GetAttribute("textContent");
 
                 ConsoleController.CurrentGame.Name = currentGame;
@@ -256,7 +215,7 @@ namespace LivesteamScrapper.Controllers
                 {
                     Task.Run(() =>
                     {
-                        Write(listCounter, this.Website, this.Livestream, "counters");
+                        Write(listCounter, _environment.Website, this.Livestream, "counters");
                         listCounter = new List<string>();
                     });
                 }
@@ -276,7 +235,7 @@ namespace LivesteamScrapper.Controllers
             {
                 if (listCounter.Count > 0)
                 {
-                    Write(listCounter, this.Website, this.Livestream, "counters");
+                    Write(listCounter, _environment.Website, this.Livestream, "counters");
                 }
             });
 
@@ -341,7 +300,7 @@ namespace LivesteamScrapper.Controllers
                         {
                             messages.Add(string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", item.Author, ",", item.Content));
                         }
-                        Write(messages, this.Website, this.Livestream, "messages");
+                        Write(messages, _environment.Website, this.Livestream, "messages");
                         chatMessages = new List<ChatMessageModel>();
                     });
                 }
@@ -378,13 +337,13 @@ namespace LivesteamScrapper.Controllers
                     {
                         messages.Add(string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", item.Author, ",", item.Content));
                     }
-                    Write(messages, this.Website, this.Livestream, "messages");
+                    Write(messages, _environment.Website, this.Livestream, "messages");
                 });
             }
 
             //Process interactions
             List<string> fileLines = chatInteractions.SelectMany(kvp => kvp.Value.Select(val => $"{kvp.Key},{val}")).ToList();
-            Write(fileLines, this.Website, this.Livestream, "viewers", true);
+            Write(fileLines, _environment.Website, this.Livestream, "viewers", true);
 
             return Task.CompletedTask;
         }

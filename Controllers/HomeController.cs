@@ -18,7 +18,7 @@ namespace LivesteamScrapper.Controllers
         public IActionResult Index()
         {
             //Start tasks
-            List<Task> tasks = StartScrapper("facebook", "samiraclose/videos/1011779029709268", 2);
+            List<Task> tasks = StartScrapper("facebook", "samiraclose/videos/545722847068063", 10);
 
             //Console Tasks
             Task.Run(() => ConsoleController.StartConsole(30));
@@ -41,7 +41,7 @@ namespace LivesteamScrapper.Controllers
         public List<Task> StartScrapper(string website, string channelPath, int minutes)
         {
             EnvironmentModel environment = EnvironmentModel.CreateEnvironment(website);
-            ScrapperController scrapperController = new ScrapperController(_logger, environment, website, channelPath);
+            ScrapperController scrapperController = new ScrapperController(_logger, environment, channelPath);
             List<Task> tasks = new List<Task>();
             tasks.Add(Task.Run(() => scrapperController.RunViewerGameScrapper(minutes)));
             tasks.Add(Task.Run(() => scrapperController.RunChatScrapper(minutes)));
