@@ -11,9 +11,12 @@ namespace LivesteamScrapper.Models
     {
         public By CloseChatAnnouncement { get; set; }
 
+        protected readonly IConfiguration _config;
+
         public LiveElementsModel()
         {
             CloseChatAnnouncement = By.TagName(string.Empty);
+            _config = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
         }
 
         public static LiveElementsModel GetElements(string website = "")
@@ -31,17 +34,17 @@ namespace LivesteamScrapper.Models
     }
     public class BooyahElements : LiveElementsModel
     {
-        public BooyahElements()
+        public BooyahElements() : base()
         {
-            CloseChatAnnouncement = By.TagName(string.Empty);
+            CloseChatAnnouncement = By.CssSelector(_config.GetValue<string>($"LiveElements:{this.GetType().Name}:CloseChatAnnouncement"));
         }
     }
 
     public class FacebookElements : LiveElementsModel
     {
-        public FacebookElements()
+        public FacebookElements() : base()
         {
-            CloseChatAnnouncement = By.CssSelector("div[class='f9o22wc5'] > div");
+            CloseChatAnnouncement = By.CssSelector(_config.GetValue<string>($"LiveElements:{this.GetType().Name}:CloseChatAnnouncement"));
         }
     }
 }
