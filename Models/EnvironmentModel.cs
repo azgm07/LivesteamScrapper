@@ -5,6 +5,7 @@ namespace LivesteamScrapper.Models
     public interface IEnvironmentInterface
     {
         public abstract string Http { get; set; }
+        public abstract string Website { get; set; }
         public abstract By Selector { get; set; }
         public abstract By ChatContainer { get; set; }
         public abstract By MessageContainer { get; set; }
@@ -39,7 +40,7 @@ namespace LivesteamScrapper.Models
             GameContainer = By.TagName(string.Empty);
         }
 
-        public static EnvironmentModel CreateEnvironment(string website = "")
+        public static EnvironmentModel GetEnvironment(string website = "")
         {
             switch (website.ToLower())
             {
@@ -74,7 +75,7 @@ namespace LivesteamScrapper.Models
         {
             Http = "https://www.facebook.com/";
             Website = "facebook";
-            Selector = By.CssSelector("div[class='qzhwtbm6 knvmm38d'] > span > h2 > span > strong:nth-child(1) > span > a");
+            Selector = By.CssSelector("div[class='f9o22wc5'] > div");
             ChatContainer = By.CssSelector("div[class='rq0escxv j83agx80 cbu4d94t eg9m0zos fh5enmmv k4urcfbm']");
             MessageContainer = By.CssSelector("div[class='tw6a2znq sj5x9vvc d1544ag0 cxgpxx05']");
             MessageAuthor = By.CssSelector("div[class='btwxx1t3 nc684nl6 bp9cbjyn'] > span > span");

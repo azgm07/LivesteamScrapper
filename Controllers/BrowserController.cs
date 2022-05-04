@@ -18,18 +18,18 @@ namespace LivesteamScrapper.Controllers
         public  ChromeDriver? Browser { get; private set; }
         public string OpenedUrl { get; set; }
 
-        private bool _isReloading;
-        public bool IsReloading
+        private bool _isReady;
+        public bool IsReady
         {
             get
             {
-                return _isReloading;
+                return _isReady;
             }
             private set
             {
-                _isReloading = value; if (PropertyChanged != null)
+                _isReady = value; if (PropertyChanged != null)
                 {
-                    PropertyChanged?.Invoke(_isReloading, EventArgs.Empty);
+                    PropertyChanged?.Invoke(_isReady, EventArgs.Empty);
                 }
             }
         }
@@ -42,7 +42,6 @@ namespace LivesteamScrapper.Controllers
         {
             _logger = logger;
             OpenedUrl = string.Empty;
-
             Browser = null;
         }
         //Finalizer
@@ -60,6 +59,7 @@ namespace LivesteamScrapper.Controllers
             {
                 if (Browser == null || Browser.Url != url)
                 {
+                    IsReady = false;
                     //Returns a new BrowserPage
                     ChromeOptions options = new ChromeOptions()
                     {
@@ -74,19 +74,20 @@ namespace LivesteamScrapper.Controllers
                     {
                         wait.Until(ExpectedConditions.ElementExists(waitSelector));
                     }
-                    ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.Ready);
                     OpenedUrl = url;
+                    IsReady = true;
                 }
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                ConsoleController.ShowExceptionLog(e.Message);
-                ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.NotReady);
+                IsReady = false;
                 if (Browser != null)
                 {
                     Browser.Dispose();
                     Browser = null;
                 }
+
+                throw;
             }
         }
     }

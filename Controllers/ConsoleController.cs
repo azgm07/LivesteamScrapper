@@ -71,20 +71,43 @@ namespace LivesteamScrapper.Controllers
 
         }
 
-        public static void ShowTimerLog(EnumsModel.TimerLog timerLog, TimerController timerController)
+        public static void ShowTimeLog(EnumsModel.TimerLog timerLog, TimeController timeController, string moreInfo)
         {
             switch (timerLog)
             {
                 case EnumsModel.TimerLog.Start:
-                    Console.WriteLine($"|{timerController.From}| Start time: {timerController.StartTime}");
+                    if(string.IsNullOrEmpty(moreInfo))
+                    {
+                        Console.WriteLine($"|{timeController.From}| Start time: {timeController.StartTime}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"|{timeController.From}| Start time: {timeController.StartTime} | {moreInfo}");
+                    }
                     Console.WriteLine(lineBreak);
                     break;
                 case EnumsModel.TimerLog.Stop:
-                    Console.WriteLine($"|{timerController.From}| Stop time: {timerController.StopTime}");
+                    if (string.IsNullOrEmpty(moreInfo))
+                    {
+                        Console.WriteLine($"|{timeController.From}| Stop time: {timeController.StopTime}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"|{timeController.From}| Stop time: {timeController.StopTime} | {moreInfo}");
+                    }
                     Console.WriteLine(lineBreak);
                     break;
                 case EnumsModel.TimerLog.Lap:
-                    Console.WriteLine($"|{timerController.From}| Lap count: {timerController.LapCount} - Lap timer: {timerController.LapTimer}");
+                    if (string.IsNullOrEmpty(moreInfo))
+                    {
+                        Console.WriteLine($"|{timeController.From}| Lap count: {timeController.LapTime.Count} - " +
+                            $"Lap timer: {timeController.LapTime.Last() - timeController.StartTime}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"|{timeController.From}| Lap count: {timeController.LapTime.Count} - " +
+                            $"Lap timer: {timeController.LapTime.Last() - timeController.StartTime} | {moreInfo}");
+                    }
                     Console.WriteLine(lineBreak);
                     break;
                 default:
