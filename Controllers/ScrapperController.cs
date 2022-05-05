@@ -24,6 +24,7 @@ namespace LivesteamScrapper.Controllers
         private CancellationTokenSource cts;
         private bool isReloading;
         private int messagesFound;
+        private int chatTimeout;
 
         public string Livestream { get; set; }
 
@@ -39,6 +40,7 @@ namespace LivesteamScrapper.Controllers
             cts = new CancellationTokenSource();
             isReloading = false;
             messagesFound = 0;
+            chatTimeout = 60000;
         }
 
         private bool OpenScrapper()
@@ -301,6 +303,7 @@ namespace LivesteamScrapper.Controllers
                 timer.AutoReset = true;
                 timer.Start();
 
+                //Main loop
                 while (!token.IsCancellationRequested)
                 {
                     DateTime start = DateTime.Now;
@@ -376,79 +379,91 @@ namespace LivesteamScrapper.Controllers
 
             double waitMilliseconds = 1000;
 
-            int strikes = 5;
-            int strikeCount = 0;
+            //Start timer to control timeout of missing messages
+            bool needRestart = false;
+            int savedMessagesFound = 0;
 
-            while (!token.IsCancellationRequested)
+            using (System.Timers.Timer timer = new System.Timers.Timer(chatTimeout))
             {
-                DateTime start = DateTime.Now;
-
-                //Local variables
-                (List<ChatMessageModel> currentMessages, int lastIndex) = this.ReadChat();
-                chatMessages.AddRange(currentMessages);
-
-
-                if (chatMessages.Count > 0)
+                timer.Elapsed += (sender, e) =>
                 {
-                    //Get message counter for each viewer
-                    Task.Run(() =>
+                    if (savedMessagesFound < messagesFound)
                     {
-                        foreach (var author in chatMessages.Select(chatMessages => chatMessages.Author))
+                        savedMessagesFound = messagesFound;
+                        needRestart = false;
+                    }
+                    else
+                    {
+                        savedMessagesFound = messagesFound;
+                        needRestart = true;
+                    }
+                };
+                timer.AutoReset = true;
+                timer.Start();
+
+                //Main loop
+                while (!token.IsCancellationRequested)
+                {
+                    DateTime start = DateTime.Now;
+
+                    //Local variables
+                    (List<ChatMessageModel> currentMessages, int lastIndex) = this.ReadChat();
+                    chatMessages.AddRange(currentMessages);
+
+
+                    if (chatMessages.Count > 0)
+                    {
+                        //Get message counter for each viewer
+                        Task.Run(() =>
                         {
-                            if (chatInteractions.ContainsKey(author))
+                            foreach (var author in chatMessages.Select(chatMessages => chatMessages.Author))
                             {
-                                chatInteractions[author] = IncrementStringNumber(chatInteractions[author]);
+                                if (chatInteractions.ContainsKey(author))
+                                {
+                                    chatInteractions[author] = IncrementStringNumber(chatInteractions[author]);
+                                }
+                                else
+                                {
+                                    chatInteractions.TryAdd(author, "1");
+                                }
                             }
-                            else
-                            {
-                                chatInteractions.TryAdd(author, "1");
-                            }
-                        }
-                    });
+                        });
 
-                    //Save all messages and reset
-                    Task.Run(() =>
-                    {
-                        List<string> messages = new List<string>();
-                        foreach (var item in chatMessages)
+                        //Save all messages and reset
+                        Task.Run(() =>
                         {
-                            messages.Add(string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", item.Author, ",", item.Content));
-                        }
-                        Write(messages, _environment.Website, this.Livestream, "messages");
-                        chatMessages = new List<ChatMessageModel>();
-                    });
-                }
+                            List<string> messages = new List<string>();
+                            foreach (var item in chatMessages)
+                            {
+                                messages.Add(string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", item.Author, ",", item.Content));
+                            }
+                            Write(messages, _environment.Website, this.Livestream, "messages");
+                            chatMessages = new List<ChatMessageModel>();
+                        });
+                    }
 
-                //Strikes to reload the page
-                if (currentMessages.Count == 0)
-                {
-                    strikeCount++;
-                }
-                else
-                {
-                    strikeCount = 0;
-                }
-
-                if (strikeCount > strikes)
-                {
-                    Task.Run(() =>
+                    //Needs to reload the page case not found any new message
+                    if (needRestart)
                     {
-                        ReloadScrapper();
-                    });
-                    strikeCount = 0;
-                }
+                        Task.Run(() =>
+                        {
+                            ReloadScrapper();
+                        });
+                        needRestart = false;
+                    }
 
-                //Timer e sleep control
-                TimeSpan timeSpan = DateTime.Now - start;
-                if (timeSpan.TotalMilliseconds < waitMilliseconds)
-                {
-                    Thread.Sleep((int)(waitMilliseconds - timeSpan.TotalMilliseconds));
-                }
+                    //Timer e sleep control
+                    TimeSpan timeSpan = DateTime.Now - start;
+                    if (timeSpan.TotalMilliseconds < waitMilliseconds)
+                    {
+                        Thread.Sleep((int)(waitMilliseconds - timeSpan.TotalMilliseconds));
+                    }
 
-                //Case reloading wait
-                while (isReloading)
-                {
-                    Thread.Sleep(1000);
+                    //Case reloading wait
+                    while (isReloading)
+                    {
+                        Thread.Sleep(1000);
+                    }
                 }
             }
 
@@ -541,8 +556,8 @@ namespace LivesteamScrapper.Controllers
             switch (environment.Website)
             {
                 case "facebook":
-                    WebDriverWait wait = new WebDriverWait(browser, TimeSpan.FromSeconds(10));
-                    wait.Until(ExpectedConditions.ElementToBeClickable(LiveElementsModel.GetElements(environment.Website).CloseChatAnnouncement)).Click();
+                    _browserController.WaitUntilElementClickable(LiveElementsModel.GetElements(environment.Website).CloseChatAnnouncement).Click();
+                    chatTimeout = 5000;
                     break;
                 default:
                     break;

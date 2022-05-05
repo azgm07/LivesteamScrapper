@@ -1,5 +1,2 @@
-- Arrumar contador para aceitar formato do facebook com *.* mil no texto.
-- Criar método de reiniciar browser e adicionar esse metodo em uma Task na function (ScrapperController.cs > PreparePage) que reinicia o browser a cada 10s e tratar erros.
-- Adicionar elementos em CssSelector do Booyah e testar novamente.
 - Expandir sistema para outras plataformas (Twitch e Youtube).
 - Criar interface de webapp que receba uma data de inicio, uma data de fim e execute de acordo com esses parâmetros, tenha um botão de iniciar e finalizar e depois consiga ler os arquivos criados ou criar visualizações relevantes.

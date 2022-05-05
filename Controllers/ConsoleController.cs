@@ -100,13 +100,11 @@ namespace LivesteamScrapper.Controllers
                 case EnumsModel.TimerLog.Lap:
                     if (string.IsNullOrEmpty(moreInfo))
                     {
-                        Console.WriteLine($"|{timeController.From}| Lap count: {timeController.LapTime.Count} - " +
-                            $"Lap timer: {timeController.LapTime.Last() - timeController.StartTime}");
+                        Console.WriteLine($"|{timeController.From}| Lap count: {timeController.LapTime.Count}");
                     }
                     else
                     {
-                        Console.WriteLine($"|{timeController.From}| Lap count: {timeController.LapTime.Count} - " +
-                            $"Lap timer: {timeController.LapTime.Last() - timeController.StartTime} | {moreInfo}");
+                        Console.WriteLine($"|{timeController.From}| Lap count: {timeController.LapTime.Count} | {moreInfo}");
                     }
                     Console.WriteLine(lineBreak);
                     break;

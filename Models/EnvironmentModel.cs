@@ -43,7 +43,7 @@ namespace LivesteamScrapper.Models
             _config = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
         }
 
-        public static EnvironmentModel? GetEnvironment(string website = "")
+        public static EnvironmentModel GetEnvironment(string website = "")
         {
             switch (website.ToLower())
             {
@@ -51,8 +51,12 @@ namespace LivesteamScrapper.Models
                     return new Booyah();
                 case "facebook":
                     return new Facebook();
+                case "twitch":
+                    return new Twitch();
+                case "youtube":
+                    return new Youtube();
                 default:
-                    return null;
+                    return new EnvironmentModel();
             }
         }
     }
@@ -75,6 +79,38 @@ namespace LivesteamScrapper.Models
     public class Facebook : EnvironmentModel
     {
         public Facebook() : base()
+        {
+            Http = _config.GetValue<string>($"Environment:{this.GetType().Name}:Http");
+            Website = _config.GetValue<string>($"Environment:{this.GetType().Name}:Website");
+            Selector = By.CssSelector(_config.GetValue<string>($"Environment:{this.GetType().Name}:Selector"));
+            ChatContainer = By.CssSelector(_config.GetValue<string>($"Environment:{this.GetType().Name}:ChatContainer"));
+            MessageContainer = By.CssSelector(_config.GetValue<string>($"Environment:{this.GetType().Name}:MessageContainer"));
+            MessageAuthor = By.CssSelector(_config.GetValue<string>($"Environment:{this.GetType().Name}:MessageAuthor"));
+            MessageContent = By.CssSelector(_config.GetValue<string>($"Environment:{this.GetType().Name}:MessageContent"));
+            CounterContainer = By.CssSelector(_config.GetValue<string>($"Environment:{this.GetType().Name}:CounterContainer"));
+            GameContainer = By.CssSelector(_config.GetValue<string>($"Environment:{this.GetType().Name}:GameContainer"));
+        }
+    }
+
+    public class Twitch : EnvironmentModel
+    {
+        public Twitch() : base()
+        {
+            Http = _config.GetValue<string>($"Environment:{this.GetType().Name}:Http");
+            Website = _config.GetValue<string>($"Environment:{this.GetType().Name}:Website");
+            Selector = By.CssSelector(_config.GetValue<string>($"Environment:{this.GetType().Name}:Selector"));
+            ChatContainer = By.CssSelector(_config.GetValue<string>($"Environment:{this.GetType().Name}:ChatContainer"));
+            MessageContainer = By.CssSelector(_config.GetValue<string>($"Environment:{this.GetType().Name}:MessageContainer"));
+            MessageAuthor = By.CssSelector(_config.GetValue<string>($"Environment:{this.GetType().Name}:MessageAuthor"));
+            MessageContent = By.CssSelector(_config.GetValue<string>($"Environment:{this.GetType().Name}:MessageContent"));
+            CounterContainer = By.CssSelector(_config.GetValue<string>($"Environment:{this.GetType().Name}:CounterContainer"));
+            GameContainer = By.CssSelector(_config.GetValue<string>($"Environment:{this.GetType().Name}:GameContainer"));
+        }
+    }
+
+    public class Youtube : EnvironmentModel
+    {
+        public Youtube() : base()
         {
             Http = _config.GetValue<string>($"Environment:{this.GetType().Name}:Http");
             Website = _config.GetValue<string>($"Environment:{this.GetType().Name}:Website");

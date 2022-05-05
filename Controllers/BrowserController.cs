@@ -53,6 +53,48 @@ namespace LivesteamScrapper.Controllers
             }
         }
 
+        public IWebElement WaitUntilElementExists(By elementLocator, int timeout = 10)
+        {
+            try
+            {
+                var wait = new WebDriverWait(Browser, TimeSpan.FromSeconds(timeout));
+                return wait.Until(ExpectedConditions.ElementExists(elementLocator));
+            }
+            catch (NoSuchElementException)
+            {
+                Console.WriteLine("Element with locator: '" + elementLocator + "' was not found in current context page.");
+                throw;
+            }
+        }
+
+        public IWebElement WaitUntilElementVisible(By elementLocator, int timeout = 10)
+        {
+            try
+            {
+                var wait = new WebDriverWait(Browser, TimeSpan.FromSeconds(timeout));
+                return wait.Until(ExpectedConditions.ElementIsVisible(elementLocator));
+            }
+            catch (NoSuchElementException)
+            {
+                Console.WriteLine("Element with locator: '" + elementLocator + "' was not found.");
+                throw;
+            }
+        }
+
+        public IWebElement WaitUntilElementClickable(By elementLocator, int timeout = 10)
+        {
+            try
+            {
+                var wait = new WebDriverWait(Browser, TimeSpan.FromSeconds(timeout));
+                return wait.Until(ExpectedConditions.ElementToBeClickable(elementLocator));
+            }
+            catch (NoSuchElementException)
+            {
+                Console.WriteLine("Element with locator: '" + elementLocator + "' was not found.");
+                throw;
+            }
+        }
+
         public void OpenBrowserPage(string url, By? waitSelector = null)
         {
             try
@@ -65,14 +107,12 @@ namespace LivesteamScrapper.Controllers
                     {
                         //BinaryLocation = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
                     };
-                    options.AddArguments(new List<string>() { "headless", "disable-gpu", "no-sandbox", "maximize-window", "log-level=3" });
+                    options.AddArguments(new List<string>() { /*"headless",*/ "disable-gpu", "no-sandbox", "maximize-window", "log-level=3" });
                     Browser = new ChromeDriver(options);
-
-                    WebDriverWait wait = new WebDriverWait(Browser, TimeSpan.FromSeconds(10));
                     Browser.Navigate().GoToUrl(url);
                     if (waitSelector != null)
                     {
-                        wait.Until(ExpectedConditions.ElementIsVisible(waitSelector));
+                        WaitUntilElementVisible(waitSelector);
                     }
                     OpenedUrl = url;
                     IsReady = true;
@@ -99,11 +139,10 @@ namespace LivesteamScrapper.Controllers
                 {
                     IsReady = false;
 
-                    WebDriverWait wait = new WebDriverWait(Browser, TimeSpan.FromSeconds(10));
                     Browser.Navigate().Refresh();
                     if (waitSelector != null)
                     {
-                        wait.Until(ExpectedConditions.ElementIsVisible(waitSelector));
+                        WaitUntilElementVisible(waitSelector);
                     }
                     IsReady = true;
                 }
