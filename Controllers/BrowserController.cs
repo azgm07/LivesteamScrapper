@@ -72,9 +72,39 @@ namespace LivesteamScrapper.Controllers
                     Browser.Navigate().GoToUrl(url);
                     if (waitSelector != null)
                     {
-                        wait.Until(ExpectedConditions.ElementExists(waitSelector));
+                        wait.Until(ExpectedConditions.ElementIsVisible(waitSelector));
                     }
                     OpenedUrl = url;
+                    IsReady = true;
+                }
+            }
+            catch (Exception)
+            {
+                IsReady = false;
+                if (Browser != null)
+                {
+                    Browser.Dispose();
+                    Browser = null;
+                }
+
+                throw;
+            }
+        }
+        
+        public void ReloadBrowserPage(By? waitSelector = null)
+        {
+            try
+            {
+                if (Browser != null)
+                {
+                    IsReady = false;
+
+                    WebDriverWait wait = new WebDriverWait(Browser, TimeSpan.FromSeconds(10));
+                    Browser.Navigate().Refresh();
+                    if (waitSelector != null)
+                    {
+                        wait.Until(ExpectedConditions.ElementIsVisible(waitSelector));
+                    }
                     IsReady = true;
                 }
             }

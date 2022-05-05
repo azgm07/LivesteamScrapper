@@ -12,7 +12,8 @@ namespace LivesteamScrapper.Models
         public enum BrowserLog
         {
             Ready,
-            NotReady
+            NotReady,
+            Reloading
         }
     }
 }

@@ -22,6 +22,8 @@ namespace LivesteamScrapper.Controllers
         private List<Task> Tasks;
         private System.Timers.Timer timerTask;
         private CancellationTokenSource cts;
+        private bool isReloading;
+        private int messagesFound;
 
         public string Livestream { get; set; }
 
@@ -35,9 +37,11 @@ namespace LivesteamScrapper.Controllers
             _browserController = new BrowserController(logger);
             timerTask = new System.Timers.Timer();
             cts = new CancellationTokenSource();
+            isReloading = false;
+            messagesFound = 0;
         }
 
-        public bool OpenBrowser()
+        private bool OpenScrapper()
         {
             //OpenBrowser
             try
@@ -45,7 +49,7 @@ namespace LivesteamScrapper.Controllers
                 _browserController.OpenBrowserPage(_environment.Http + Livestream, _environment.Selector);
                 if (_browserController.IsReady && _browserController.Browser != null)
                 {
-                    PreparePage(_environment, _browserController.Browser);
+                    PrepareScrapperPage(_environment, _browserController.Browser);
                 }
                 ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.Ready);
                 return true;
@@ -59,15 +63,39 @@ namespace LivesteamScrapper.Controllers
 
         }
 
+        private void ReloadScrapper()
+        {
+            //ReloadBrowser
+            try
+            {
+                ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.Reloading);
+                isReloading = true;
+                _browserController.ReloadBrowserPage(_environment.Selector);
+                if (_browserController.IsReady && _browserController.Browser != null)
+                {
+                    PrepareScrapperPage(_environment, _browserController.Browser);
+                }
+                ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.Ready);
+                isReloading = false;
+            }
+            catch (Exception e)
+            {
+                ConsoleController.ShowExceptionLog(e.Message);
+                ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.NotReady);
+                isReloading = false;
+            }
+
+        }
+
         public void Run(int minutes)
         {
             cts = new CancellationTokenSource();
-            
-            if(OpenBrowser())
+
+            if (OpenScrapper())
             {
                 Task.Run(() => TimerTasksCancellation(minutes));
 
-                List <Task> tasks = new List<Task>();
+                List<Task> tasks = new List<Task>();
                 tasks.Add(Task.Run(() => RunViewerGameScrapper(cts.Token)));
                 tasks.Add(Task.Run(() => RunChatScrapper(cts.Token)));
                 Tasks = tasks;
@@ -79,7 +107,7 @@ namespace LivesteamScrapper.Controllers
 
         }
 
-        public void Stop ()
+        public void Stop()
         {
             cts.Cancel();
         }
@@ -143,8 +171,6 @@ namespace LivesteamScrapper.Controllers
                     }
                 }
 
-                ConsoleController.Chat.MessagesFound = scrapeMessages.Count;
-
                 //Limits the return list based on the lastmessage found
                 int lastIndex = -1;
                 List<ChatMessageModel> returnMessages;
@@ -172,6 +198,10 @@ namespace LivesteamScrapper.Controllers
                 {
                     ConsoleController.Chat.LastMessage = lastMessage;
                 }
+
+                messagesFound += returnMessages.Count;
+                ConsoleController.Chat.MessagesFound = messagesFound;
+
                 return (returnMessages, lastIndex);
             }
             catch (Exception e)
@@ -195,11 +225,26 @@ namespace LivesteamScrapper.Controllers
                 int viewersCount = 0;
                 var counter = _browserController.Browser.FindElement(_environment.CounterContainer);
                 string counterText = counter.GetAttribute("textContent");
-                counterText = Regex.Replace(counterText, "[^0-9]", "");
-                if (int.TryParse(counterText, out int result))
+
+                //Treat different types of text
+                if (counterText.IndexOf("mil") != -1 || counterText.IndexOf("K") != -1)
                 {
-                    viewersCount = result;
+                    counterText = Regex.Replace(counterText, "[^0-9,.]", "");
+                    counterText = counterText.Replace(".", ",");
+                    if (decimal.TryParse(counterText, out decimal result))
+                    {
+                        viewersCount = (int)(result * 1000);
+                    }
                 }
+                else
+                {
+                    counterText = Regex.Replace(counterText, "[^0-9]", "");
+                    if (int.TryParse(counterText, out int result))
+                    {
+                        viewersCount = result;
+                    }
+                }
+
 
                 ConsoleController.Viewers.Count = viewersCount;
                 return viewersCount;
@@ -248,38 +293,54 @@ namespace LivesteamScrapper.Controllers
             List<int> listCounter = new List<int>();
             string? currentGame = null;
 
-            while (!token.IsCancellationRequested)
+            //Start timer to control verify counter and submit highest
+            bool flush = false;
+            using (System.Timers.Timer timer = new System.Timers.Timer(60000))
             {
-                DateTime start = DateTime.Now;
+                timer.Elapsed += (sender, e) => flush = true;
+                timer.AutoReset = true;
+                timer.Start();
 
-                //Local variables
-                int? counter = this.ReadViewerCounter();
-                currentGame = this.ReadCurrentGame();
-
-                if (counter.HasValue && !string.IsNullOrEmpty(currentGame))
+                while (!token.IsCancellationRequested)
                 {
-                    listCounter.Add(counter.Value);
-                }
+                    DateTime start = DateTime.Now;
 
-                //Each 60 records is transfered to the csv file
-                if (listCounter.Count > 60)
-                {
-                    Task.Run(() =>
+                    //Local variables
+                    int? counter = this.ReadViewerCounter();
+                    currentGame = this.ReadCurrentGame();
+
+                    if (counter.HasValue && !string.IsNullOrEmpty(currentGame))
                     {
-                        string max = string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", currentGame, ",", listCounter.Max().ToString());
-                        List<string> newList = new List<string>();
-                        newList.Add(max);
-                        Write(newList, _environment.Website, this.Livestream, "counters");
-                        listCounter = new List<int>();
-                    });
-                    timeController.Lap("Saved highest viewercount on csv");
-                }
+                        listCounter.Add(counter.Value);
+                    }
 
-                //Timer e sleep control
-                TimeSpan timeSpan = DateTime.Now - start;
-                if (timeSpan.TotalMilliseconds < waitMilliseconds)
-                {
-                    Thread.Sleep((int)(waitMilliseconds - timeSpan.TotalMilliseconds));
+                    //Each 60 sec records is transfered to the csv file
+                    if (flush)
+                    {
+                        Task.Run(() =>
+                        {
+                            string max = string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", currentGame, ",", listCounter.Max().ToString());
+                            List<string> newList = new List<string>();
+                            newList.Add(max);
+                            Write(newList, _environment.Website, this.Livestream, "counters");
+                            listCounter = new List<int>();
+                        });
+                        timeController.Lap("Saved highest viewercount on csv");
+                        flush = false;
+                    }
+
+                    //Timer e sleep control
+                    TimeSpan timeSpan = DateTime.Now - start;
+                    if (timeSpan.TotalMilliseconds < waitMilliseconds)
+                    {
+                        Thread.Sleep((int)(waitMilliseconds - timeSpan.TotalMilliseconds));
+                    }
+
+                    //Case reloading wait
+                    while (isReloading)
+                    {
+                        Thread.Sleep(1000);
+                    }
                 }
             }
 
@@ -302,6 +363,7 @@ namespace LivesteamScrapper.Controllers
 
         public Task RunChatScrapper(CancellationToken token)
         {
+
             //Controllers
             TimeController timeController = new TimeController(_logger, "RunChatScrapper");
 
@@ -313,6 +375,9 @@ namespace LivesteamScrapper.Controllers
             timeController.Start();
 
             double waitMilliseconds = 1000;
+
+            int strikes = 5;
+            int strikeCount = 0;
 
             while (!token.IsCancellationRequested)
             {
@@ -354,11 +419,36 @@ namespace LivesteamScrapper.Controllers
                     });
                 }
 
+                //Strikes to reload the page
+                if (currentMessages.Count == 0)
+                {
+                    strikeCount++;
+                }
+                else
+                {
+                    strikeCount = 0;
+                }
+
+                if (strikeCount > strikes)
+                {
+                    Task.Run(() =>
+                    {
+                        ReloadScrapper();
+                    });
+                    strikeCount = 0;
+                }
+
                 //Timer e sleep control
                 TimeSpan timeSpan = DateTime.Now - start;
                 if (timeSpan.TotalMilliseconds < waitMilliseconds)
                 {
                     Thread.Sleep((int)(waitMilliseconds - timeSpan.TotalMilliseconds));
+                }
+
+                //Case reloading wait
+                while (isReloading)
+                {
+                    Thread.Sleep(1000);
                 }
             }
 
@@ -446,7 +536,7 @@ namespace LivesteamScrapper.Controllers
         }
 
         //Handle page start by environment
-        public void PreparePage(EnvironmentModel environment, ChromeDriver browser)
+        public void PrepareScrapperPage(EnvironmentModel environment, ChromeDriver browser)
         {
             switch (environment.Website)
             {

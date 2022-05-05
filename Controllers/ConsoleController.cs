@@ -120,11 +120,13 @@ namespace LivesteamScrapper.Controllers
             switch (browserLog)
             {
                 case EnumsModel.BrowserLog.Ready:
-                    Console.WriteLine($"\n|Browser| : Page is ready\n");
+                    Console.WriteLine($"|{DateTime.Now}| Browser : Page is ready");
                     break;
                 case EnumsModel.BrowserLog.NotReady:
-                    Console.WriteLine($"\n|Browser| : Page is not ready\n");
-                    Console.WriteLine(lineBreak);
+                    Console.WriteLine($"|{DateTime.Now}| Browser : Page is not ready");
+                    break;
+                case EnumsModel.BrowserLog.Reloading:
+                    Console.WriteLine($"|{DateTime.Now}| Browser : Page is reloading");
                     break;
                 default:
                     break;
