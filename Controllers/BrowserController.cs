@@ -107,12 +107,12 @@ namespace LivesteamScrapper.Controllers
                     {
                         //BinaryLocation = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
                     };
-                    options.AddArguments(new List<string>() { /*"headless",*/ "disable-gpu", "no-sandbox", "maximize-window", "log-level=3" });
+                    options.AddArguments(new List<string>() { "headless", "disable-gpu", "no-sandbox", "disable-extensions", "log-level=3" });
                     Browser = new ChromeDriver(options);
                     Browser.Navigate().GoToUrl(url);
                     if (waitSelector != null)
                     {
-                        WaitUntilElementVisible(waitSelector);
+                        WaitUntilElementExists(waitSelector, 30);
                     }
                     OpenedUrl = url;
                     IsReady = true;
@@ -142,7 +142,7 @@ namespace LivesteamScrapper.Controllers
                     Browser.Navigate().Refresh();
                     if (waitSelector != null)
                     {
-                        WaitUntilElementVisible(waitSelector);
+                        WaitUntilElementExists(waitSelector);
                     }
                     IsReady = true;
                 }

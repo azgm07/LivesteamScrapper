@@ -51,7 +51,7 @@ namespace LivesteamScrapper.Controllers
                 _browserController.OpenBrowserPage(_environment.Http + Livestream, _environment.Selector);
                 if (_browserController.IsReady && _browserController.Browser != null)
                 {
-                    PrepareScrapperPage(_environment, _browserController.Browser);
+                    PrepareScrapperPage();
                 }
                 ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.Ready);
                 return true;
@@ -75,7 +75,7 @@ namespace LivesteamScrapper.Controllers
                 _browserController.ReloadBrowserPage(_environment.Selector);
                 if (_browserController.IsReady && _browserController.Browser != null)
                 {
-                    PrepareScrapperPage(_environment, _browserController.Browser);
+                    PrepareScrapperPage();
                 }
                 ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.Ready);
                 isReloading = false;
@@ -551,13 +551,30 @@ namespace LivesteamScrapper.Controllers
         }
 
         //Handle page start by environment
-        public void PrepareScrapperPage(EnvironmentModel environment, ChromeDriver browser)
+        public void PrepareScrapperPage()
         {
-            switch (environment.Website)
+            switch (_environment.Website)
             {
                 case "facebook":
-                    _browserController.WaitUntilElementClickable(LiveElementsModel.GetElements(environment.Website).CloseChatAnnouncement).Click();
+                    _browserController.WaitUntilElementClickable(LiveElementsModel.GetElements(_environment.Website).CloseChatAnnouncement).Click();
                     chatTimeout = 5000;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        //Handle chat scrapper by environment
+        public void IFrameHandler()
+        {
+            switch (_environment.Website)
+            {
+                case "youtube":
+                    if(_browserController.Browser != null)
+                    {
+                        _browserController.Browser.SwitchTo().Frame("chatframe");
+                        _ = _browserController.Browser;
+                    }
                     break;
                 default:
                     break;

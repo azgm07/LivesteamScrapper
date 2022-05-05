@@ -18,7 +18,7 @@ namespace LivesteamScrapper.Controllers
         public IActionResult Index()
         {
             //Start tasks
-            StartScrapper("twitch", "zigueira", 5);
+            StartScrapper("youtube", "v=IUyuRnmZGmk", 5);
             
             return View();
         }
