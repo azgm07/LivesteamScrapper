@@ -1,2 +1,2 @@
-- Expandir sistema para outras plataformas (Twitch e Youtube).
+- Expandir sistema para Youtube, necessita de tratamento para IFrames.
 - Criar interface de webapp que receba uma data de inicio, uma data de fim e execute de acordo com esses parâmetros, tenha um botão de iniciar e finalizar e depois consiga ler os arquivos criados ou criar visualizações relevantes.

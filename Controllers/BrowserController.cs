@@ -15,7 +15,7 @@ namespace LivesteamScrapper.Controllers
         private readonly ILogger<Controller> _logger;
         public bool IsScrapping { get; set; }
         public bool IsBrowserOpened { get; set; }
-        public  ChromeDriver? Browser { get; private set; }
+        public  ChromeDriver Browser { get; private set; }
         public string OpenedUrl { get; set; }
 
         private bool _isReady;
@@ -38,11 +38,28 @@ namespace LivesteamScrapper.Controllers
         public event EventHandler? PropertyChanged;
 
         //Constructor
-        public BrowserController(ILogger<Controller> logger)
+        public BrowserController(ILogger<Controller> logger, bool isHeadless = true)
         {
             _logger = logger;
             OpenedUrl = string.Empty;
-            Browser = null;
+
+            //Returns a new BrowserPage
+            ChromeOptions options = new ChromeOptions()
+            {
+                //BinaryLocation = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
+            };
+
+            //Change options depending on the case
+            if (isHeadless)
+            {
+                options.AddArguments(new List<string>() { "headless", "disable-gpu", "no-sandbox", "disable-extensions", "log-level=3" });
+            }
+            else
+            {
+                options.AddArguments(new List<string>() { /*"headless",*/ "disable-gpu", "no-sandbox", "disable-extensions", "log-level=3" });
+            }
+
+            Browser = new ChromeDriver(options);
         }
         //Finalizer
         ~BrowserController()
@@ -99,16 +116,9 @@ namespace LivesteamScrapper.Controllers
         {
             try
             {
-                if (Browser == null || Browser.Url != url)
+                if (Browser.Url != url)
                 {
-                    IsReady = false;
-                    //Returns a new BrowserPage
-                    ChromeOptions options = new ChromeOptions()
-                    {
-                        //BinaryLocation = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
-                    };
-                    options.AddArguments(new List<string>() { /*"headless",*/ "disable-gpu", "no-sandbox", "disable-extensions", "log-level=3" });
-                    Browser = new ChromeDriver(options);
+                    IsReady = false;                    
                     Browser.Navigate().GoToUrl(url);
                     if (waitSelector != null)
                     {
@@ -121,12 +131,6 @@ namespace LivesteamScrapper.Controllers
             catch (Exception)
             {
                 IsReady = false;
-                if (Browser != null)
-                {
-                    Browser.Dispose();
-                    Browser = null;
-                }
-
                 throw;
             }
         }
@@ -150,12 +154,6 @@ namespace LivesteamScrapper.Controllers
             catch (Exception)
             {
                 IsReady = false;
-                if (Browser != null)
-                {
-                    Browser.Dispose();
-                    Browser = null;
-                }
-
                 throw;
             }
         }

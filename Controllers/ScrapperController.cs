@@ -19,6 +19,7 @@ namespace LivesteamScrapper.Controllers
         public bool IsBrowserOpened { get; set; }
         public readonly EnvironmentModel _environment;
         private readonly BrowserController _browserController;
+        private BrowserController? _browserControllerAux;
         private string lastMessage = "";
         private List<Task> Tasks;
         private System.Timers.Timer timerTask;
@@ -37,6 +38,7 @@ namespace LivesteamScrapper.Controllers
             Livestream = livestream;
             Tasks = new List<Task>();
             _browserController = new BrowserController(logger);
+            _browserControllerAux = null;
             timerTask = new System.Timers.Timer();
             cts = new CancellationTokenSource();
             isReloading = false;
@@ -153,41 +155,7 @@ namespace LivesteamScrapper.Controllers
             try
             {
                 //Retrive new comments
-                List<ChatMessageModel> scrapeMessages = new List<ChatMessageModel>();
-                var messages = GetChatMessages();
-
-                //Transform all messages to a list in order
-                foreach (var message in messages)
-                {
-                    ChatMessageModel newMessage = new ChatMessageModel();
-                    string messageAuthor, messageContent;
-
-                    try
-                    {
-                        messageAuthor = message.FindElement(_environment.MessageAuthor).Text;
-                    }
-                    catch
-                    {
-                        messageAuthor = "";
-                    }
-
-                    try
-                    {
-                        messageContent = message.FindElement(_environment.MessageContent).Text;
-                    }
-                    catch
-                    {
-                        messageContent = "";
-                    }
-
-                    if (!string.IsNullOrEmpty(messageAuthor))
-                    {
-                        newMessage.Author = messageAuthor;
-                        newMessage.Content = messageContent;
-
-                        scrapeMessages.Add(newMessage);
-                    }
-                }
+                List<ChatMessageModel> scrapeMessages = GetChatMessages();                
 
                 //Limits the return list based on the lastmessage found
                 int lastIndex = -1;
@@ -569,11 +537,44 @@ namespace LivesteamScrapper.Controllers
         //Handle page start by environment
         public void PrepareScrapperPage()
         {
+            string url;
             switch (_environment.Website)
             {
                 case "facebook":
                     chatTimeout = 5000;
                     _browserController.WaitUntilElementClickable(LiveElementsModel.GetElements(_environment.Website).CloseChatAnnouncement).Click();
+                    break;
+                case "youtube":
+                    //Open chat in aux browser page
+                    if(_browserControllerAux == null)
+                    {
+                        _browserControllerAux = new BrowserController(_logger, false);
+                    }
+                    url = _environment.Http + "live_chat?is_popout=1&v=" + Livestream.Split("=")[1];
+                    _browserControllerAux.OpenBrowserPage(url, null);
+
+                    //Change the name to channel name
+                    if (_browserController.Browser != null)
+                    {
+                        try
+                        {
+                            string name = _browserController.Browser.FindElements(LiveElementsModel.GetElements(_environment.Website).ChannelName)[0].Text;
+                            Livestream = name;
+                        }
+                        catch (Exception e)
+                        {
+                            ConsoleController.ShowExceptionLog(e.Message);
+                        }
+                    }
+                    break;
+                case "twitch":
+                    //Open chat in aux browser page
+                    if (_browserControllerAux == null)
+                    {
+                        _browserControllerAux = new BrowserController(_logger, false);
+                    }
+                    url = _environment.Http + "popout/" + Livestream + "/chat?popout=";
+                    _browserControllerAux.OpenBrowserPage(url, null);
                     break;
                 default:
                     break;
@@ -581,40 +582,84 @@ namespace LivesteamScrapper.Controllers
         }
 
         //Handle chat scrapper by environment
-        public ReadOnlyCollection<IWebElement> GetChatMessages()
+        public List<ChatMessageModel> GetChatMessages()
         {
-            var browser = _browserController.Browser;
-
             ReadOnlyCollection<IWebElement> messages = new ReadOnlyCollection<IWebElement>(new List<IWebElement>());
+            List<ChatMessageModel> scrapeMessages = new List<ChatMessageModel>();
 
-            if (browser == null)
+            if (_browserController.Browser == null)
             {
-                return messages;
+                return new List<ChatMessageModel>();
             }
+
+            //Auxiliar para Iframe
+            if (_browserControllerAux == null)
+            {
+                _browserControllerAux = new BrowserController(_logger, false);
+            }
+            var browserAux = _browserControllerAux.Browser;
 
             try
             {
                 switch (_environment.Website)
                 {
                     case "youtube":
-                        if (_browserController.Browser != null)
+                        if (browserAux != null)
                         {
-                            browser.SwitchTo().Frame("chatframe");
+                            messages = browserAux.FindElements(_environment.MessageContainer);                            
                         }
-                        messages = browser.FindElements(_environment.MessageContainer);
                         break;
-
+                    case "twitch":
+                        if (browserAux != null)
+                        {
+                            messages = browserAux.FindElements(_environment.MessageContainer);
+                        }
+                        break;
                     default:
-                        var chat = browser.FindElement(_environment.ChatContainer);
+                        var chat = _browserController.Browser.FindElement(_environment.ChatContainer);
                         messages = chat.FindElements(_environment.MessageContainer);
                         break;
+                }
+                
+                //Transform all messages to a list in order
+                foreach (var message in messages)
+                {
+                    ChatMessageModel newMessage = new ChatMessageModel();
+                    string messageAuthor, messageContent;
+
+                    try
+                    {
+                        messageAuthor = message.FindElement(_environment.MessageAuthor).Text;
+                    }
+                    catch
+                    {
+                        messageAuthor = "";
+                    }
+
+                    try
+                    {
+                        messageContent = message.FindElement(_environment.MessageContent).Text;
+                    }
+                    catch
+                    {
+                        messageContent = "";
+                    }
+
+                    if (!string.IsNullOrEmpty(messageAuthor))
+                    {
+                        newMessage.Author = messageAuthor;
+                        newMessage.Content = messageContent;
+
+                        scrapeMessages.Add(newMessage);
+                    }
                 }
             }
             catch (Exception e)
             {
                 ConsoleController.ShowExceptionLog(e.Message);
             }
-            return messages;
+
+            return scrapeMessages;
         }
     }
 }

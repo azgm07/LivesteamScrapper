@@ -5,17 +5,20 @@ namespace LivesteamScrapper.Models
     public interface ILiveElementsInterface
     {
         public abstract By CloseChatAnnouncement { get; set; }
+        public abstract By ChannelName { get; set; }
     }
 
     public class LiveElementsModel : ILiveElementsInterface
     {
         public By CloseChatAnnouncement { get; set; }
+        public By ChannelName { get; set; }
 
         protected readonly IConfiguration _config;
 
         public LiveElementsModel()
         {
             CloseChatAnnouncement = By.TagName(string.Empty);
+            ChannelName = By.TagName(string.Empty);
             _config = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
         }
 
@@ -27,6 +30,10 @@ namespace LivesteamScrapper.Models
                     return new BooyahElements();
                 case "facebook":
                     return new FacebookElements();
+                case "twitch":
+                    return new TwitchElements();
+                case "youtube":
+                    return new YoutubeElements();
                 default:
                     return new LiveElementsModel();
             }
@@ -37,6 +44,7 @@ namespace LivesteamScrapper.Models
         public BooyahElements() : base()
         {
             CloseChatAnnouncement = By.CssSelector(_config.GetValue<string>($"LiveElements:{this.GetType().Name}:CloseChatAnnouncement"));
+            ChannelName = By.CssSelector(_config.GetValue<string>($"LiveElements:{this.GetType().Name}:ChannelName"));
         }
     }
 
@@ -45,6 +53,25 @@ namespace LivesteamScrapper.Models
         public FacebookElements() : base()
         {
             CloseChatAnnouncement = By.CssSelector(_config.GetValue<string>($"LiveElements:{this.GetType().Name}:CloseChatAnnouncement"));
+            ChannelName = By.CssSelector(_config.GetValue<string>($"LiveElements:{this.GetType().Name}:ChannelName"));
+        }
+    }
+
+    public class TwitchElements : LiveElementsModel
+    {
+        public TwitchElements() : base()
+        {
+            CloseChatAnnouncement = By.CssSelector(_config.GetValue<string>($"LiveElements:{this.GetType().Name}:CloseChatAnnouncement"));
+            ChannelName = By.CssSelector(_config.GetValue<string>($"LiveElements:{this.GetType().Name}:ChannelName"));
+        }
+    }
+
+    public class YoutubeElements : LiveElementsModel
+    {
+        public YoutubeElements() : base()
+        {
+            CloseChatAnnouncement = By.CssSelector(_config.GetValue<string>($"LiveElements:{this.GetType().Name}:CloseChatAnnouncement"));
+            ChannelName = By.CssSelector(_config.GetValue<string>($"LiveElements:{this.GetType().Name}:ChannelName"));
         }
     }
 }
