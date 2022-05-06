@@ -5,6 +5,7 @@ using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
 using SeleniumExtras.WaitHelpers;
 using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Timers;
@@ -51,7 +52,14 @@ namespace LivesteamScrapper.Controllers
                 _browserController.OpenBrowserPage(_environment.Http + Livestream, _environment.Selector);
                 if (_browserController.IsReady && _browserController.Browser != null)
                 {
-                    PrepareScrapperPage();
+                    try
+                    {
+                        PrepareScrapperPage();
+                    }
+                    catch (Exception e)
+                    {
+                        ConsoleController.ShowExceptionLog(e.Message);
+                    }
                 }
                 ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.Ready);
                 return true;
@@ -70,14 +78,23 @@ namespace LivesteamScrapper.Controllers
             //ReloadBrowser
             try
             {
-                ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.Reloading);
+                if (chatTimeout > 10)
+                {
+                    ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.Reloading);
+                }
+
                 isReloading = true;
+
                 _browserController.ReloadBrowserPage(_environment.Selector);
                 if (_browserController.IsReady && _browserController.Browser != null)
                 {
                     PrepareScrapperPage();
                 }
-                ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.Ready);
+
+                if (chatTimeout > 10)
+                {
+                    ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.Ready);
+                }
                 isReloading = false;
             }
             catch (Exception e)
@@ -137,8 +154,7 @@ namespace LivesteamScrapper.Controllers
             {
                 //Retrive new comments
                 List<ChatMessageModel> scrapeMessages = new List<ChatMessageModel>();
-                var chat = _browserController.Browser.FindElement(_environment.ChatContainer);
-                var messages = chat.FindElements(_environment.MessageContainer);
+                var messages = GetChatMessages();
 
                 //Transform all messages to a list in order
                 foreach (var message in messages)
@@ -325,7 +341,7 @@ namespace LivesteamScrapper.Controllers
                             string max = string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", currentGame, ",", listCounter.Max().ToString());
                             List<string> newList = new List<string>();
                             newList.Add(max);
-                            Write(newList, _environment.Website, this.Livestream, "counters");
+                            WriteCSV(newList, _environment.Website, this.Livestream, "counters");
                             listCounter = new List<int>();
                         });
                         timeController.Lap("Saved highest viewercount on csv");
@@ -355,7 +371,7 @@ namespace LivesteamScrapper.Controllers
                     string max = string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", currentGame, ",", listCounter.Max().ToString());
                     List<string> newList = new List<string>();
                     newList.Add(max);
-                    Write(newList, _environment.Website, this.Livestream, "counters");
+                    WriteCSV(newList, _environment.Website, this.Livestream, "counters");
                 }
             });
 
@@ -437,7 +453,7 @@ namespace LivesteamScrapper.Controllers
                             {
                                 messages.Add(string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", item.Author, ",", item.Content));
                             }
-                            Write(messages, _environment.Website, this.Livestream, "messages");
+                            WriteCSV(messages, _environment.Website, this.Livestream, "messages");
                             chatMessages = new List<ChatMessageModel>();
                         });
                     }
@@ -496,13 +512,13 @@ namespace LivesteamScrapper.Controllers
                     {
                         messages.Add(string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", item.Author, ",", item.Content));
                     }
-                    Write(messages, _environment.Website, this.Livestream, "messages");
+                    WriteCSV(messages, _environment.Website, this.Livestream, "messages");
                 });
             }
 
             //Process interactions
             List<string> fileLines = chatInteractions.SelectMany(kvp => kvp.Value.Select(val => $"{kvp.Key},{val}")).ToList();
-            Write(fileLines, _environment.Website, this.Livestream, "viewers", true);
+            WriteCSV(fileLines, _environment.Website, this.Livestream, "viewers", true);
 
             return Task.CompletedTask;
         }
@@ -518,7 +534,7 @@ namespace LivesteamScrapper.Controllers
             return strNew;
         }
 
-        public void Write(List<string> lines, string website, string livestream, string type, bool startNew = false)
+        public void WriteCSV(List<string> lines, string website, string livestream, string type, bool startNew = false)
         {
             string file = $"{GetUntilSpecial(website.ToLower())}-{GetUntilSpecial(livestream.ToLower())}-{type}.csv";
 
@@ -556,8 +572,8 @@ namespace LivesteamScrapper.Controllers
             switch (_environment.Website)
             {
                 case "facebook":
-                    _browserController.WaitUntilElementClickable(LiveElementsModel.GetElements(_environment.Website).CloseChatAnnouncement).Click();
                     chatTimeout = 5000;
+                    _browserController.WaitUntilElementClickable(LiveElementsModel.GetElements(_environment.Website).CloseChatAnnouncement).Click();
                     break;
                 default:
                     break;
@@ -565,20 +581,40 @@ namespace LivesteamScrapper.Controllers
         }
 
         //Handle chat scrapper by environment
-        public void IFrameHandler()
+        public ReadOnlyCollection<IWebElement> GetChatMessages()
         {
-            switch (_environment.Website)
+            var browser = _browserController.Browser;
+
+            ReadOnlyCollection<IWebElement> messages = new ReadOnlyCollection<IWebElement>(new List<IWebElement>());
+
+            if (browser == null)
             {
-                case "youtube":
-                    if(_browserController.Browser != null)
-                    {
-                        _browserController.Browser.SwitchTo().Frame("chatframe");
-                        _ = _browserController.Browser;
-                    }
-                    break;
-                default:
-                    break;
+                return messages;
             }
+
+            try
+            {
+                switch (_environment.Website)
+                {
+                    case "youtube":
+                        if (_browserController.Browser != null)
+                        {
+                            browser.SwitchTo().Frame("chatframe");
+                        }
+                        messages = browser.FindElements(_environment.MessageContainer);
+                        break;
+
+                    default:
+                        var chat = browser.FindElement(_environment.ChatContainer);
+                        messages = chat.FindElements(_environment.MessageContainer);
+                        break;
+                }
+            }
+            catch (Exception e)
+            {
+                ConsoleController.ShowExceptionLog(e.Message);
+            }
+            return messages;
         }
     }
 }
