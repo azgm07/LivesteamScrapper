@@ -215,7 +215,7 @@ namespace LivesteamScrapper.Controllers
             //Verify if the browser is already open with a page
             if (_browserController.Browser == null)
             {
-                return (new List<ChatMessageModel>(), 0);
+                return (new List<ChatMessageModel>(), -1);
             }
 
             try
@@ -259,7 +259,7 @@ namespace LivesteamScrapper.Controllers
             catch (Exception e)
             {
                 ConsoleController.ShowExceptionLog(e.Message);
-                return (new List<ChatMessageModel>(), 0);
+                return (new List<ChatMessageModel>(), -1);
             }
         }
 
@@ -372,6 +372,7 @@ namespace LivesteamScrapper.Controllers
                     if (counter.HasValue && counter > 0 && !string.IsNullOrEmpty(currentGame))
                     {
                         listCounter.Add(counter.Value);
+                        failedAtempts = 0;
                     }
                     else
                     {
@@ -445,6 +446,9 @@ namespace LivesteamScrapper.Controllers
             List<ChatMessageModel> chatMessages = new();
             Dictionary<string, string> chatInteractions = new();
 
+            //Failed atempts
+            int failedAtempts = 0;
+
             //Flush tasks
             List<Task> tasksFlush = new();
 
@@ -485,15 +489,32 @@ namespace LivesteamScrapper.Controllers
 
                     //Local variables
                     (List<ChatMessageModel> currentMessages, int lastIndex) = await Task.Run(() => ReadChat(), CancellationToken.None);
-                    chatMessages.AddRange(currentMessages);
 
-
-                    if (chatMessages.Count > 0)
+                    if(lastIndex < 0)
                     {
+                        failedAtempts++;
+                    }
+                    else
+                    {
+                        failedAtempts = 0;
+                    }
+
+                    //Break if too many fails
+                    if (failedAtempts >= MaxFails)
+                    {
+                        ConsoleController.ShowScrapperLog(ScrapperLog.Failed);
+                        Stop();
+                        break;
+                    }
+
+                    if (currentMessages.Count > 0)
+                    {
+                        chatMessages.AddRange(currentMessages);
+
                         //Get message counter for each viewer
                         Task taskCounters = Task.Run(() =>
                         {
-                            foreach (var author in chatMessages.Select(chatMessages => chatMessages.Author))
+                            foreach (var author in chatMessages.Select(message => message.Author))
                             {
                                 if (chatInteractions.ContainsKey(author))
                                 {
