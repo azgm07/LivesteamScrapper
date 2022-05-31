@@ -143,13 +143,13 @@ namespace LivesteamScrapper.Controllers
             if (!IsScrapping)
             {
                 bool hasStarted = await Task.Run(() => Start());
-                int count = 3;
+                int count = 4;
 
                 while (!hasStarted && count > 0)
                 {
                     hasStarted = await Task.Run(() => Start());
                     count--;
-                    await Task.Delay(5000);
+                    await Task.Delay(15000);
                 }
 
                 if (hasStarted)
