@@ -19,9 +19,8 @@ namespace LivesteamScrapper.Controllers
         public bool IsBrowserOpened { get; set; }
         public readonly EnvironmentModel _environment;
         private readonly BrowserController _browserController;
-        private BrowserController? _browserControllerAux;
+        private BrowserController? _browserControllerChat;
         private string lastMessage = "";
-        private List<Task> Tasks;
         private System.Timers.Timer timerTask;
         private CancellationTokenSource cts;
         private bool isReloading;
@@ -36,9 +35,8 @@ namespace LivesteamScrapper.Controllers
             _logger = logger;
             _environment = environment;
             Livestream = livestream;
-            Tasks = new List<Task>();
             _browserController = new BrowserController(logger);
-            _browserControllerAux = null;
+            _browserControllerChat = null;
             timerTask = new System.Timers.Timer();
             cts = new CancellationTokenSource();
             isReloading = false;
@@ -108,22 +106,24 @@ namespace LivesteamScrapper.Controllers
 
         }
 
-        public void Run(int minutes)
+        public async Task RunTestAsync(int minutes)
         {
             cts = new CancellationTokenSource();
 
-            if (OpenScrapper())
+            bool isOpen = await Task.Run(() => OpenScrapper());
+
+            if (isOpen)
             {
-                Task.Run(() => TimerTasksCancellation(minutes));
+                StartTimerTasksCancellation(minutes);
 
                 List<Task> tasks = new List<Task>();
-                tasks.Add(Task.Run(() => RunViewerGameScrapper(cts.Token)));
-                tasks.Add(Task.Run(() => RunChatScrapper(cts.Token)));
-                Tasks = tasks;
+                tasks.Add(RunViewerGameScrapperAsync(cts.Token));
+                tasks.Add(RunChatScrapperAsync(cts.Token));
 
                 //Console Tasks
-                Task.Run(() => ConsoleController.StartConsole(30));
-                Task.Run(() => { Task.WaitAll(tasks.ToArray()); ConsoleController.StopConsole(); });
+                tasks.Add(ConsoleController.RunConsoleAsync(cts.Token, 30));
+                await Task.WhenAll(tasks);
+                StopTimerTasksCancellation();
             }
 
         }
@@ -133,15 +133,17 @@ namespace LivesteamScrapper.Controllers
             cts.Cancel();
         }
 
-        public Task TimerTasksCancellation(int minutes)
+        public void StartTimerTasksCancellation(int minutes)
         {
             double totalMsec = minutes * 60000;
-
             timerTask = new System.Timers.Timer(totalMsec);
             timerTask.Elapsed += (sender, e) => Stop();
             timerTask.Start();
+        }
 
-            return Task.CompletedTask;
+        public void StopTimerTasksCancellation()
+        {
+            timerTask.Stop();
         }
 
         public (List<ChatMessageModel>, int lastIndex) ReadChat()
@@ -266,22 +268,25 @@ namespace LivesteamScrapper.Controllers
             }
         }
 
-        public Task RunViewerGameScrapper(CancellationToken token)
+        public async Task RunViewerGameScrapperAsync(CancellationToken token)
         {
             //Controllers
-            TimeController timeController = new TimeController(_logger, "RunViewerScrapper");
+            TimeController timeController = new(_logger, "RunViewerScrapper");
 
             //Loop scrapping per sec.
             timeController.Start();
 
+            //Flush tasks
+            List<Task> tasksFlush = new();    
+
             double waitMilliseconds = 1000;
 
-            List<int> listCounter = new List<int>();
+            List<int> listCounter = new();
             string? currentGame = null;
 
             //Start timer to control verify counter and submit highest
             bool flush = false;
-            using (System.Timers.Timer timer = new System.Timers.Timer(60000))
+            using (System.Timers.Timer timer = new(60000))
             {
                 timer.Elapsed += (sender, e) => flush = true;
                 timer.AutoReset = true;
@@ -293,8 +298,8 @@ namespace LivesteamScrapper.Controllers
                     DateTime start = DateTime.Now;
 
                     //Local variables
-                    int? counter = this.ReadViewerCounter();
-                    currentGame = this.ReadCurrentGame();
+                    int? counter = await Task.Run(() => ReadViewerCounter(), CancellationToken.None);
+                    currentGame = await Task.Run(() => ReadCurrentGame(), CancellationToken.None);
 
                     if (counter.HasValue && !string.IsNullOrEmpty(currentGame))
                     {
@@ -304,59 +309,67 @@ namespace LivesteamScrapper.Controllers
                     //Each 60 sec records is transfered to the csv file
                     if (flush)
                     {
-                        Task.Run(() =>
+                        Task task = Task.Run(() =>
                         {
                             string max = string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", currentGame, ",", listCounter.Max().ToString());
-                            List<string> newList = new List<string>();
+                            List<string> newList = new();
                             newList.Add(max);
                             WriteCSV(newList, _environment.Website, this.Livestream, "counters");
                             listCounter = new List<int>();
-                        });
+                        }, CancellationToken.None);
                         timeController.Lap("Saved highest viewercount on csv");
                         flush = false;
+
+                        tasksFlush.Add(task);
                     }
 
                     //Timer e sleep control
                     TimeSpan timeSpan = DateTime.Now - start;
                     if (timeSpan.TotalMilliseconds < waitMilliseconds)
                     {
-                        Thread.Sleep((int)(waitMilliseconds - timeSpan.TotalMilliseconds));
+                        await Task.Delay((int)(waitMilliseconds - timeSpan.TotalMilliseconds), CancellationToken.None);
                     }
 
                     //Case reloading wait
                     while (isReloading)
                     {
-                        Thread.Sleep(1000);
+                        await Task.Delay(1000, CancellationToken.None);
                     }
                 }
             }
+            timeController.Stop();
 
             //Send to file the rest of counter lines
-            Task.Run(() =>
+            if (listCounter.Count > 0)
             {
-                if (listCounter.Count > 0)
+                await Task.Run(() =>
                 {
                     string max = string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", currentGame, ",", listCounter.Max().ToString());
                     List<string> newList = new List<string>();
                     newList.Add(max);
                     WriteCSV(newList, _environment.Website, this.Livestream, "counters");
-                }
-            });
+                }, CancellationToken.None);
+            }
 
-            timeController.Stop();
+            await Task.WhenAll(tasksFlush);
 
-            return Task.CompletedTask;
         }
 
-        public Task RunChatScrapper(CancellationToken token)
+        public async Task RunChatScrapperAsync(CancellationToken token)
         {
 
             //Controllers
-            TimeController timeController = new TimeController(_logger, "RunChatScrapper");
+            TimeController timeController = new(_logger, "RunChatScrapper");
 
             //Variables
-            List<ChatMessageModel> chatMessages = new List<ChatMessageModel>();
-            Dictionary<string, string> chatInteractions = new Dictionary<string, string>();
+            List<ChatMessageModel> chatMessages = new();
+            Dictionary<string, string> chatInteractions = new();
+
+            //Flush tasks
+            List<Task> tasksFlush = new();
+
+            //Reload tasks
+            List<Task> tasksReload = new();
 
             //Loop scrapping per sec.
             timeController.Start();
@@ -367,7 +380,7 @@ namespace LivesteamScrapper.Controllers
             bool needRestart = false;
             int savedMessagesFound = 0;
 
-            using (System.Timers.Timer timer = new System.Timers.Timer(chatTimeout))
+            using (System.Timers.Timer timer = new(chatTimeout))
             {
                 timer.Elapsed += (sender, e) =>
                 {
@@ -391,14 +404,14 @@ namespace LivesteamScrapper.Controllers
                     DateTime start = DateTime.Now;
 
                     //Local variables
-                    (List<ChatMessageModel> currentMessages, int lastIndex) = this.ReadChat();
+                    (List<ChatMessageModel> currentMessages, int lastIndex) = await Task.Run(() => ReadChat(), CancellationToken.None);
                     chatMessages.AddRange(currentMessages);
 
 
                     if (chatMessages.Count > 0)
                     {
                         //Get message counter for each viewer
-                        Task.Run(() =>
+                        Task taskCounters = Task.Run(() =>
                         {
                             foreach (var author in chatMessages.Select(chatMessages => chatMessages.Author))
                             {
@@ -411,53 +424,58 @@ namespace LivesteamScrapper.Controllers
                                     chatInteractions.TryAdd(author, "1");
                                 }
                             }
-                        });
+                        }, CancellationToken.None);
+                        tasksFlush.Add(taskCounters);
 
                         //Save all messages and reset
-                        Task.Run(() =>
+                        Task taskMessages = Task.Run(() =>
                         {
-                            List<string> messages = new List<string>();
+                            List<string> messages = new();
                             foreach (var item in chatMessages)
                             {
                                 messages.Add(string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", item.Author, ",", item.Content));
                             }
                             WriteCSV(messages, _environment.Website, this.Livestream, "messages");
                             chatMessages = new List<ChatMessageModel>();
-                        });
+                        }, CancellationToken.None);
+                        tasksFlush.Add(taskMessages);
                     }
 
                     //Needs to reload the page case not found any new message
                     if (needRestart)
                     {
-                        Task.Run(() =>
+                        Task taskRestart = Task.Run(() =>
                         {
                             ReloadScrapper();
-                        });
+                        }, CancellationToken.None);
+
                         needRestart = false;
+                        tasksReload.Add(taskRestart);
+                        await Task.WhenAll(tasksReload);
                     }
 
                     //Timer e sleep control
                     TimeSpan timeSpan = DateTime.Now - start;
                     if (timeSpan.TotalMilliseconds < waitMilliseconds)
                     {
-                        Thread.Sleep((int)(waitMilliseconds - timeSpan.TotalMilliseconds));
+                        await Task.Delay((int)(waitMilliseconds - timeSpan.TotalMilliseconds), CancellationToken.None);
                     }
 
                     //Case reloading wait
                     while (isReloading)
                     {
-                        Thread.Sleep(1000);
+                        await Task.Delay(1000, CancellationToken.None);
                     }
                 }
             }
 
             timeController.Stop();
 
-            //Tranfere para arquivo ao final caso tenha sobrado
+            //Send to file the rest of counter lines
             if (chatMessages.Count > 0)
             {
                 //Get message counter for each viewer
-                Task.Run(() =>
+                Task taskCounters = Task.Run(() =>
                 {
                     foreach (var author in chatMessages.Select(chatMessages => chatMessages.Author))
                     {
@@ -470,10 +488,11 @@ namespace LivesteamScrapper.Controllers
                             chatInteractions.TryAdd(author, "1");
                         }
                     }
-                });
+                }, CancellationToken.None);
+                tasksFlush.Add(taskCounters);
 
                 //Save all remaining messages
-                Task.Run(() =>
+                Task taskMessages = Task.Run(() =>
                 {
                     List<string> messages = new List<string>();
                     foreach (var item in chatMessages)
@@ -481,14 +500,18 @@ namespace LivesteamScrapper.Controllers
                         messages.Add(string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", item.Author, ",", item.Content));
                     }
                     WriteCSV(messages, _environment.Website, this.Livestream, "messages");
-                });
+                }, CancellationToken.None);
+                tasksFlush.Add(taskMessages);
             }
 
-            //Process interactions
-            List<string> fileLines = chatInteractions.SelectMany(kvp => kvp.Value.Select(val => $"{kvp.Key},{val}")).ToList();
-            WriteCSV(fileLines, _environment.Website, this.Livestream, "viewers", true);
+            await Task.WhenAll(tasksFlush);
 
-            return Task.CompletedTask;
+            //Chat interactions
+            await Task.Run(() =>
+            {
+                List<string> fileLines = chatInteractions.SelectMany(kvp => kvp.Value.Select(val => $"{kvp.Key},{val}")).ToList();
+                WriteCSV(fileLines, _environment.Website, this.Livestream, "viewers", true);
+            }, CancellationToken.None);
         }
 
         public string IncrementStringNumber(string str)
@@ -546,12 +569,12 @@ namespace LivesteamScrapper.Controllers
                     break;
                 case "youtube":
                     //Open chat in aux browser page
-                    if(_browserControllerAux == null)
+                    if(_browserControllerChat == null)
                     {
-                        _browserControllerAux = new BrowserController(_logger, false);
+                        _browserControllerChat = new BrowserController(_logger, false);
                     }
                     url = _environment.Http + "live_chat?is_popout=1&v=" + Livestream.Split("=")[1];
-                    _browserControllerAux.OpenBrowserPage(url, null);
+                    _browserControllerChat.OpenBrowserPage(url, null);
 
                     //Change the name to channel name
                     if (_browserController.Browser != null)
@@ -569,12 +592,12 @@ namespace LivesteamScrapper.Controllers
                     break;
                 case "twitch":
                     //Open chat in aux browser page
-                    if (_browserControllerAux == null)
+                    if (_browserControllerChat == null)
                     {
-                        _browserControllerAux = new BrowserController(_logger, false);
+                        _browserControllerChat = new BrowserController(_logger, false);
                     }
                     url = _environment.Http + "popout/" + Livestream + "/chat?popout=";
-                    _browserControllerAux.OpenBrowserPage(url, null);
+                    _browserControllerChat.OpenBrowserPage(url, null);
                     break;
                 default:
                     break;
@@ -584,36 +607,29 @@ namespace LivesteamScrapper.Controllers
         //Handle chat scrapper by environment
         public List<ChatMessageModel> GetChatMessages()
         {
-            ReadOnlyCollection<IWebElement> messages = new ReadOnlyCollection<IWebElement>(new List<IWebElement>());
-            List<ChatMessageModel> scrapeMessages = new List<ChatMessageModel>();
+            ReadOnlyCollection<IWebElement> messages = new(new List<IWebElement>());
+            List<ChatMessageModel> scrapeMessages = new();
 
             if (_browserController.Browser == null)
             {
                 return new List<ChatMessageModel>();
             }
 
-            //Auxiliar para Iframe
-            if (_browserControllerAux == null)
-            {
-                _browserControllerAux = new BrowserController(_logger, false);
-            }
-            var browserAux = _browserControllerAux.Browser;
+
+            ChromeDriver browserAux;
 
             try
             {
                 switch (_environment.Website)
                 {
-                    case "youtube":
-                        if (browserAux != null)
+                    case "youtube": case "twitch":
+                        //To Iframe
+                        if (_browserControllerChat == null)
                         {
-                            messages = browserAux.FindElements(_environment.MessageContainer);                            
+                            _browserControllerChat = new BrowserController(_logger, false);
                         }
-                        break;
-                    case "twitch":
-                        if (browserAux != null)
-                        {
-                            messages = browserAux.FindElements(_environment.MessageContainer);
-                        }
+                        browserAux = _browserControllerChat.Browser;
+                        messages = browserAux.FindElements(_environment.MessageContainer);
                         break;
                     default:
                         var chat = _browserController.Browser.FindElement(_environment.ChatContainer);

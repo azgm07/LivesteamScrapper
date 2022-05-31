@@ -16,24 +16,20 @@ namespace LivesteamScrapper.Controllers
         public static ViewersConsole Viewers { get; set; } = new ViewersConsole();
         public static GameConsole CurrentGame { get; set; } = new GameConsole();
 
-        public static Task StartConsole(int delaySeconds = 30)
+        public static async Task RunConsoleAsync(CancellationToken token, int delaySeconds = 30)
         {
             Console.WriteLine(string.Concat("\n", "Console Started ", lineBreak, "\n"));
             IsRunning = true;
             Thread.Sleep(delaySeconds * 1000);
-            while (IsRunning)
+            while (!token.IsCancellationRequested)
             {
                 ShowGameLog();
                 ShowViewersLog();
                 ShowChatLog();
                 Console.WriteLine(lineBreak);
-                Thread.Sleep(delaySeconds * 1000);
+                await Task.Delay(delaySeconds * 1000);
             }
-            return Task.CompletedTask;
-        }
 
-        public static void StopConsole()
-        {
             Console.WriteLine(string.Concat("\n", "Console Stopped ", lineBreak, "\n"));
             IsRunning = false;
         }

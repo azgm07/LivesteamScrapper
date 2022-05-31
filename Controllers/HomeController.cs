@@ -19,7 +19,7 @@ namespace LivesteamScrapper.Controllers
         {
             //Start tasks
             List<Task> tasks = new List<Task>();
-            //tasks.Add(Task.Run(() => StartScrapper("booyah", "ggeasy", 5)));
+            tasks.Add(StartScrapperAsync("booyah", "vanquilha"));
             //tasks.Add(Task.Run(() => StartScrapper("facebook", "PerninhaGamers/videos/377959470924951/", 5)));
             //tasks.Add(Task.Run(() => StartScrapper("twitch", "alanzoka", 10)));
             //tasks.Add(Task.Run(() => StartScrapper("youtube", "watch?v=nd5NmOVfgXs", 5)));
@@ -38,11 +38,11 @@ namespace LivesteamScrapper.Controllers
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
 
-        public void StartScrapper(string website, string channelPath, int minutes)
+        public async Task StartScrapperAsync(string website, string channelPath)
         {
             EnvironmentModel environment = EnvironmentModel.GetEnvironment(website);
             ScrapperController scrapperController = new ScrapperController(_logger, environment, channelPath);
-            scrapperController.Run(minutes);
+            await scrapperController.RunTestAsync(5);
         }
     }
 }
