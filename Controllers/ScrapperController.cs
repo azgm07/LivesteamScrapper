@@ -9,15 +9,19 @@ using System.Collections.ObjectModel;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Timers;
+using static LivesteamScrapper.Models.EnumsModel;
 
 namespace LivesteamScrapper.Controllers
 {
     public class ScrapperController : Controller
     {
         private readonly ILogger<Controller> _logger;
-        public bool IsScrapping { get; set; }
-        public bool IsBrowserOpened { get; set; }
+        public bool IsScrapping { get; private set; }
         public readonly EnvironmentModel _environment;
+        public ScrapperMode Mode { get; private set; }
+        public int MaxFails { get; set; }
+
+
         private readonly BrowserController _browserController;
         private BrowserController? _browserControllerChat;
         private string lastMessage = "";
@@ -41,7 +45,10 @@ namespace LivesteamScrapper.Controllers
             cts = new CancellationTokenSource();
             isReloading = false;
             messagesFound = 0;
-            chatTimeout = 60000;
+            chatTimeout = 600000;
+            IsScrapping = false;
+            Mode = ScrapperMode.Off;
+            MaxFails = 10;
         }
 
         private bool OpenScrapper()
@@ -55,19 +62,26 @@ namespace LivesteamScrapper.Controllers
                     try
                     {
                         PrepareScrapperPage();
+                        ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.Ready);
+                        IsScrapping = true;
                     }
                     catch (Exception e)
                     {
+                        IsScrapping = false;
                         ConsoleController.ShowExceptionLog(e.Message);
                     }
                 }
-                ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.Ready);
+                else
+                {
+                    IsScrapping = false;
+                }
                 return true;
             }
             catch (Exception e)
             {
                 ConsoleController.ShowExceptionLog(e.Message);
                 ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.NotReady);
+                IsScrapping = false;
                 return false;
             }
 
@@ -108,12 +122,10 @@ namespace LivesteamScrapper.Controllers
 
         public async Task RunTestAsync(int minutes)
         {
-            cts = new CancellationTokenSource();
-
-            bool isOpen = await Task.Run(() => OpenScrapper());
-
-            if (isOpen)
+            bool hasStarted = await Task.Run(() => Start());
+            if (hasStarted)
             {
+                Mode = ScrapperMode.All;
                 StartTimerTasksCancellation(minutes);
 
                 List<Task> tasks = new List<Task>();
@@ -123,27 +135,79 @@ namespace LivesteamScrapper.Controllers
                 //Console Tasks
                 tasks.Add(ConsoleController.RunConsoleAsync(cts.Token, 30));
                 await Task.WhenAll(tasks);
-                StopTimerTasksCancellation();
             }
 
+        }
+        public async Task RunViewerScrapperAsync()
+        {
+            if (!IsScrapping)
+            {
+                bool hasStarted = await Task.Run(() => Start());
+                int count = 3;
+
+                while (!hasStarted && count > 0)
+                {
+                    hasStarted = await Task.Run(() => Start());
+                    count--;
+                    await Task.Delay(5000);
+                }
+
+                if (hasStarted)
+                {
+                    Mode = ScrapperMode.Viewers;
+                    List<Task> tasks = new List<Task>();
+                    tasks.Add(RunViewerGameScrapperAsync(cts.Token));
+
+                    //Console Tasks
+                    tasks.Add(ConsoleController.RunConsoleAsync(cts.Token, 30));
+
+                    await Task.WhenAll(tasks);
+                    await Task.Run(() => Stop());
+                }
+            }
+            else
+            {
+                ConsoleController.ShowScrapperLog(ScrapperLog.Running);
+            }
+        }
+
+        private bool Start()
+        {
+            cts = new CancellationTokenSource();
+            bool isOpen = OpenScrapper();
+
+            if (isOpen)
+            {
+                ConsoleController.ShowScrapperLog(ScrapperLog.Started);
+            }
+            else
+            {
+                ConsoleController.ShowScrapperLog(ScrapperLog.FailedToStart);
+            }
+            return isOpen;
         }
 
         public void Stop()
         {
+            if (IsScrapping)
+            {
+                ConsoleController.ShowScrapperLog(ScrapperLog.Stopped);
+            }
             cts.Cancel();
+            IsScrapping = false;
+            Mode = ScrapperMode.Off;
         }
 
         public void StartTimerTasksCancellation(int minutes)
         {
             double totalMsec = minutes * 60000;
             timerTask = new System.Timers.Timer(totalMsec);
-            timerTask.Elapsed += (sender, e) => Stop();
+            timerTask.Elapsed += (sender, e) =>
+            {
+                Stop();
+                timerTask.Stop();
+            };
             timerTask.Start();
-        }
-
-        public void StopTimerTasksCancellation()
-        {
-            timerTask.Stop();
         }
 
         public (List<ChatMessageModel>, int lastIndex) ReadChat()
@@ -157,7 +221,7 @@ namespace LivesteamScrapper.Controllers
             try
             {
                 //Retrive new comments
-                List<ChatMessageModel> scrapeMessages = GetChatMessages();                
+                List<ChatMessageModel> scrapeMessages = GetChatMessages();
 
                 //Limits the return list based on the lastmessage found
                 int lastIndex = -1;
@@ -277,12 +341,16 @@ namespace LivesteamScrapper.Controllers
             timeController.Start();
 
             //Flush tasks
-            List<Task> tasksFlush = new();    
+            List<Task> tasksFlush = new();
 
             double waitMilliseconds = 1000;
 
             List<int> listCounter = new();
             string? currentGame = null;
+            int? counter = null;
+
+            //Failed atempts
+            int failedAtempts = 0;
 
             //Start timer to control verify counter and submit highest
             bool flush = false;
@@ -298,12 +366,24 @@ namespace LivesteamScrapper.Controllers
                     DateTime start = DateTime.Now;
 
                     //Local variables
-                    int? counter = await Task.Run(() => ReadViewerCounter(), CancellationToken.None);
+                    counter = await Task.Run(() => ReadViewerCounter(), CancellationToken.None);
                     currentGame = await Task.Run(() => ReadCurrentGame(), CancellationToken.None);
 
-                    if (counter.HasValue && !string.IsNullOrEmpty(currentGame))
+                    if (counter.HasValue && counter > 0 && !string.IsNullOrEmpty(currentGame))
                     {
                         listCounter.Add(counter.Value);
+                    }
+                    else
+                    {
+                        failedAtempts++;
+                    }
+
+                    //Break if too many fails
+                    if(failedAtempts >= MaxFails)
+                    {
+                        ConsoleController.ShowScrapperLog(ScrapperLog.Failed);
+                        Stop();
+                        break;
                     }
 
                     //Each 60 sec records is transfered to the csv file
@@ -569,9 +649,13 @@ namespace LivesteamScrapper.Controllers
                     break;
                 case "youtube":
                     //Open chat in aux browser page
-                    if(_browserControllerChat == null)
+                    if (_browserControllerChat == null)
                     {
                         _browserControllerChat = new BrowserController(_logger, false);
+                    }
+                    else
+                    {
+                        _browserControllerChat.ReloadBrowserPage();
                     }
                     url = _environment.Http + "live_chat?is_popout=1&v=" + Livestream.Split("=")[1];
                     _browserControllerChat.OpenBrowserPage(url, null);
@@ -622,7 +706,8 @@ namespace LivesteamScrapper.Controllers
             {
                 switch (_environment.Website)
                 {
-                    case "youtube": case "twitch":
+                    case "youtube":
+                    case "twitch":
                         //To Iframe
                         if (_browserControllerChat == null)
                         {
@@ -636,7 +721,7 @@ namespace LivesteamScrapper.Controllers
                         messages = chat.FindElements(_environment.MessageContainer);
                         break;
                 }
-                
+
                 //Transform all messages to a list in order
                 foreach (var message in messages)
                 {

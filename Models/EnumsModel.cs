@@ -15,5 +15,22 @@ namespace LivesteamScrapper.Models
             NotReady,
             Reloading
         }
+
+        public enum ScrapperLog
+        {
+            Started,
+            Running,
+            FailedToStart,
+            Failed,
+            Stopped
+        }
+
+        public enum ScrapperMode
+        {
+            Off,
+            Viewers,
+            Chat,
+            All
+        }
     }
 }

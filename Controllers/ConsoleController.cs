@@ -6,10 +6,6 @@ namespace LivesteamScrapper.Controllers
 {
     public static class ConsoleController
     {
-        //private static readonly ILogger<Controller> _logger;
-
-        private static bool IsRunning;
-
         private static string lineBreak = "------------------------------";
 
         public static ChatConsole Chat { get; set; } = new ChatConsole();
@@ -19,7 +15,6 @@ namespace LivesteamScrapper.Controllers
         public static async Task RunConsoleAsync(CancellationToken token, int delaySeconds = 30)
         {
             Console.WriteLine(string.Concat("\n", "Console Started ", lineBreak, "\n"));
-            IsRunning = true;
             Thread.Sleep(delaySeconds * 1000);
             while (!token.IsCancellationRequested)
             {
@@ -31,7 +26,6 @@ namespace LivesteamScrapper.Controllers
             }
 
             Console.WriteLine(string.Concat("\n", "Console Stopped ", lineBreak, "\n"));
-            IsRunning = false;
         }
 
         private static void ShowChatLog()
@@ -121,6 +115,30 @@ namespace LivesteamScrapper.Controllers
                     break;
                 case EnumsModel.BrowserLog.Reloading:
                     Console.WriteLine($"|{DateTime.Now}| Browser : Page is reloading");
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        public static void ShowScrapperLog(EnumsModel.ScrapperLog scrapperLog)
+        {
+            switch (scrapperLog)
+            {
+                case EnumsModel.ScrapperLog.Started:
+                    Console.WriteLine($"|{DateTime.Now}| Scrapper : Has Started");
+                    break;
+                case EnumsModel.ScrapperLog.Running:
+                    Console.WriteLine($"|{DateTime.Now}| Scrapper : Is already running");
+                    break;
+                case EnumsModel.ScrapperLog.FailedToStart:
+                    Console.WriteLine($"|{DateTime.Now}| Scrapper : Failed to Start");
+                    break;
+                case EnumsModel.ScrapperLog.Failed:
+                    Console.WriteLine($"|{DateTime.Now}| Scrapper : Failed and has to Stop");
+                    break;
+                case EnumsModel.ScrapperLog.Stopped:
+                    Console.WriteLine($"|{DateTime.Now}| Scrapper : Has Stopped");
                     break;
                 default:
                     break;

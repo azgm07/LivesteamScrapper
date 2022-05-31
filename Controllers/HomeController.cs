@@ -20,9 +20,6 @@ namespace LivesteamScrapper.Controllers
             //Start tasks
             List<Task> tasks = new List<Task>();
             tasks.Add(StartScrapperAsync("booyah", "vanquilha"));
-            //tasks.Add(Task.Run(() => StartScrapper("facebook", "PerninhaGamers/videos/377959470924951/", 5)));
-            //tasks.Add(Task.Run(() => StartScrapper("twitch", "alanzoka", 10)));
-            //tasks.Add(Task.Run(() => StartScrapper("youtube", "watch?v=nd5NmOVfgXs", 5)));
             
             return View();
         }
