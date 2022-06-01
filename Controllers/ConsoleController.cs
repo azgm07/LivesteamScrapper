@@ -23,51 +23,69 @@ namespace LivesteamScrapper.Controllers
 
         public async Task RunConsoleAsync(CancellationToken token, int delaySeconds = 30)
         {
-            Console.WriteLine(string.Concat("\n", "Console Started ", lineBreak, "\n"));
+            Console.WriteLine(string.Concat($"|{DateTime.Now}|", "Console Started ", "\n", lineBreak));
             Thread.Sleep(delaySeconds * 1000);
             while (!token.IsCancellationRequested)
             {
-                ShowGameLog();
-                ShowViewersLog();
-                ShowChatLog();
-                Console.WriteLine(lineBreak);
+                List<string> strings = new();
+                strings.Add(ShowChannelLog());
+                strings.Add(ShowGameLog());
+                strings.Add(ShowViewersLog());
+                strings.Add(ShowChatLog());
+
+                string joined = string.Join(" | ", strings);
+                Console.WriteLine(string.Concat($"|{ DateTime.Now}| ", joined, "\n", lineBreak));
+
                 await Task.Delay(delaySeconds * 1000);
             }
 
-            Console.WriteLine(string.Concat("\n", "Console Stopped ", lineBreak, "\n"));
+            Console.WriteLine(string.Concat($"|{DateTime.Now}| ", "Console Stopped ", "\n", lineBreak));
         }
 
-        private void ShowChatLog()
+        private string ShowChatLog()
         {
             ChatConsole chatConsole = Chat;
             if (chatConsole.MessagesFound != -1)
             {
-                Console.WriteLine($"Messages found in page: {chatConsole.MessagesFound}");
+                return $"Messages found in page: {chatConsole.MessagesFound}";
             }
             if (!string.IsNullOrEmpty(chatConsole.LastMessage))
             {
-                Console.WriteLine($"Last message found: {chatConsole.LastMessage}");
+                return $"Last message found: {chatConsole.LastMessage}";
             }
+            return "";
         }
 
-        private void ShowViewersLog()
+        private string ShowViewersLog()
         {
             ViewersConsole viewersConsole = Viewers;
             if (viewersConsole.Count != -1)
             {
-                Console.WriteLine($"Viewers Count: {viewersConsole.Count}");
+                return $"Viewers Count: {viewersConsole.Count}";
             }
+            return "";
         }
 
-        private void ShowGameLog()
+        private string ShowChannelLog()
+        {
+
+            ChannelConsole channelConsole = Channel;
+            if (!string.IsNullOrEmpty(channelConsole.Website) && !string.IsNullOrEmpty(channelConsole.Name))
+            {
+                return $"Channel: {channelConsole.Website}/{channelConsole.Name}";
+            }
+            return "";
+        }
+
+        private string ShowGameLog()
         {
 
             GameConsole gameConsole = CurrentGame;
             if (!string.IsNullOrEmpty(gameConsole.Name))
             {
-                Console.WriteLine($"Playing: {gameConsole.Name}");
+                return $"Playing: {gameConsole.Name}";
             }
-
+            return "";
         }
 
         public static void ShowTimeLog(EnumsModel.TimerLog timerLog, TimeController timeController, string moreInfo)
@@ -77,35 +95,32 @@ namespace LivesteamScrapper.Controllers
                 case EnumsModel.TimerLog.Start:
                     if(string.IsNullOrEmpty(moreInfo))
                     {
-                        Console.WriteLine($"|{timeController.From}| Start time: {timeController.StartTime}");
+                        Console.WriteLine($"|{timeController.From}| Start time: {timeController.StartTime}" + "\n" + lineBreak);
                     }
                     else
                     {
-                        Console.WriteLine($"|{timeController.From}| Start time: {timeController.StartTime} | {moreInfo}");
+                        Console.WriteLine($"|{timeController.From}| Start time: {timeController.StartTime} | {moreInfo}" + "\n" + lineBreak);
                     }
-                    Console.WriteLine(lineBreak);
                     break;
                 case EnumsModel.TimerLog.Stop:
                     if (string.IsNullOrEmpty(moreInfo))
                     {
-                        Console.WriteLine($"|{timeController.From}| Stop time: {timeController.StopTime}");
+                        Console.WriteLine($"|{timeController.From}| Stop time: {timeController.StopTime}" + "\n" + lineBreak);
                     }
                     else
                     {
-                        Console.WriteLine($"|{timeController.From}| Stop time: {timeController.StopTime} | {moreInfo}");
+                        Console.WriteLine($"|{timeController.From}| Stop time: {timeController.StopTime} | {moreInfo}" + "\n" + lineBreak);
                     }
-                    Console.WriteLine(lineBreak);
                     break;
                 case EnumsModel.TimerLog.Lap:
                     if (string.IsNullOrEmpty(moreInfo))
                     {
-                        Console.WriteLine($"|{timeController.From}| Lap count: {timeController.LapTime.Count}");
+                        Console.WriteLine($"|{timeController.From}| Lap count: {timeController.LapTime.Count}" + "\n" + lineBreak);
                     }
                     else
                     {
-                        Console.WriteLine($"|{timeController.From}| Lap count: {timeController.LapTime.Count} | {moreInfo}");
+                        Console.WriteLine($"|{timeController.From}| Lap count: {timeController.LapTime.Count} | {moreInfo}" + "\n" + lineBreak);
                     }
-                    Console.WriteLine(lineBreak);
                     break;
                 default:
                     break;
@@ -117,13 +132,13 @@ namespace LivesteamScrapper.Controllers
             switch (browserLog)
             {
                 case EnumsModel.BrowserLog.Ready:
-                    Console.WriteLine($"|{DateTime.Now}| Browser : Page is ready");
+                    Console.WriteLine($"|{DateTime.Now}| Browser : Page is ready" + "\n" + lineBreak);
                     break;
                 case EnumsModel.BrowserLog.NotReady:
-                    Console.WriteLine($"|{DateTime.Now}| Browser : Page is not ready");
+                    Console.WriteLine($"|{DateTime.Now}| Browser : Page is not ready" + "\n" + lineBreak);
                     break;
                 case EnumsModel.BrowserLog.Reloading:
-                    Console.WriteLine($"|{DateTime.Now}| Browser : Page is reloading");
+                    Console.WriteLine($"|{DateTime.Now}| Browser : Page is reloading" + "\n" + lineBreak);
                     break;
                 default:
                     break;
@@ -135,19 +150,19 @@ namespace LivesteamScrapper.Controllers
             switch (scrapperLog)
             {
                 case EnumsModel.ScrapperLog.Started:
-                    Console.WriteLine($"|{DateTime.Now}| Scrapper : Has Started");
+                    Console.WriteLine($"|{DateTime.Now}| Scrapper : Has Started" + "\n" + lineBreak);
                     break;
                 case EnumsModel.ScrapperLog.Running:
-                    Console.WriteLine($"|{DateTime.Now}| Scrapper : Is already running");
+                    Console.WriteLine($"|{DateTime.Now}| Scrapper : Is already running" + "\n" + lineBreak);
                     break;
                 case EnumsModel.ScrapperLog.FailedToStart:
-                    Console.WriteLine($"|{DateTime.Now}| Scrapper : Failed to Start");
+                    Console.WriteLine($"|{DateTime.Now}| Scrapper : Failed to Start" + "\n" + lineBreak);
                     break;
                 case EnumsModel.ScrapperLog.Failed:
-                    Console.WriteLine($"|{DateTime.Now}| Scrapper : Failed and has to Stop");
+                    Console.WriteLine($"|{DateTime.Now}| Scrapper : Failed and has to Stop" + "\n" + lineBreak);
                     break;
                 case EnumsModel.ScrapperLog.Stopped:
-                    Console.WriteLine($"|{DateTime.Now}| Scrapper : Has Stopped");
+                    Console.WriteLine($"|{DateTime.Now}| Scrapper : Has Stopped" + "\n" + lineBreak);
                     break;
                 default:
                     break;
@@ -156,7 +171,7 @@ namespace LivesteamScrapper.Controllers
 
         public static void ShowExceptionLog(string message)
         {
-            Console.WriteLine($"\n|Exception| : {message}\n");
+            Console.WriteLine($"|{DateTime.Now}| Exception : {message}" + "\n" + lineBreak);
         }
     }
 }

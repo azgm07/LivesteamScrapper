@@ -120,31 +120,44 @@ namespace LivesteamScrapper.Controllers
 
         public async Task StartAllStreamScrapperAsync(ScrapperMode scrapperMode)
         {
-            List<Task> tasks = new();
-            foreach (var stream in streams)
-            {
-                if (!stream.Scrapper.IsScrapping)
-                {
-                    switch (scrapperMode)
-                    {
-                        case ScrapperMode.Off:
-                            break;
-                        case ScrapperMode.Viewers:
-                            tasks.Add(stream.Scrapper.RunViewerScrapperAsync());
-                            break;
-                        case ScrapperMode.Chat:
-                            break;
-                        case ScrapperMode.All:
-                            break;
-                        default:
-                            break;
-                    }
-                    stream.Status = ScrapperStatus.Running;
-                }
-            }
-
             try
             {
+                List<Task> tasks = new();
+                foreach (var stream in streams)
+                {
+                    if (!stream.Scrapper.IsScrapping)
+                    {
+                        switch (scrapperMode)
+                        {
+                            case ScrapperMode.Off:
+                                break;
+                            case ScrapperMode.Viewers:
+                                tasks.Add(
+                                    Task.Run(stream.Scrapper.RunViewerScrapperAsync).ContinueWith((result) => 
+                                    {
+                                        if (result.Result)
+                                        {
+                                            stream.Status = ScrapperStatus.Running;
+                                        }
+                                        else
+                                        {
+                                            stream.Status = ScrapperStatus.Waiting;
+                                        }
+                                    }
+                                    ,TaskScheduler.Default)
+                                );
+                                break;
+                            case ScrapperMode.Chat:
+                                break;
+                            case ScrapperMode.All:
+                                break;
+                            default:
+                                break;
+                        }
+                        stream.Status = ScrapperStatus.Running;
+                    }
+                }
+
                 await Task.WhenAll(tasks);
             }
             catch (Exception e)
@@ -200,19 +213,22 @@ namespace LivesteamScrapper.Controllers
             }
         }
 
+        public void AddStreamEntries(List<(string, string)> streamers)
+        {
+            foreach (var (website, channel) in streamers)
+            {
+                AddStream(website, channel);
+            }
+        }
+
         public async Task StreamingWatcherAsync(ScrapperMode mode, List<(string, string)>? streamers = null)
         {
             //Load streams or get from parameters
-            if (streamers != null)
+            if(streamers != null)
             {
-                List<Task> tasks = new();
-                foreach (var (website, channel) in streamers)
-                {
-                    tasks.Add(Task.Run(() => AddStream(website, channel)));
-                }
-                await Task.WhenAll(tasks);
-                await StartAllStreamScrapperAsync(mode);
+                await Task.Run(() => AddStreamEntries(streamers));
             }
+            Task task = StartAllStreamScrapperAsync(mode);
 
             //Check and update
             while (!ct.IsCancellationRequested)

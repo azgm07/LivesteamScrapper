@@ -1,5 +1,6 @@
 ﻿using LivesteamScrapper.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.VisualStudio.Threading;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
@@ -21,6 +22,7 @@ namespace LivesteamScrapper.Controllers
         public readonly EnvironmentModel _environment;
         public ScrapperMode Mode { get; private set; }
         public int MaxFails { get; set; }
+        public CancellationTokenSource Cts { get; private set; }
 
 
         private readonly BrowserController _browserController;
@@ -29,7 +31,6 @@ namespace LivesteamScrapper.Controllers
 
         private string lastMessage = "";
         private System.Timers.Timer timerTask;
-        private CancellationTokenSource cts;
         private bool isReloading;
         private int messagesFound;
         private int chatTimeout;
@@ -47,7 +48,7 @@ namespace LivesteamScrapper.Controllers
             _browserControllerChat = null;
             consoleController = new();
             timerTask = new();
-            cts = new();
+            Cts = new();
             isReloading = false;
             messagesFound = 0;
             chatTimeout = 600000;
@@ -73,7 +74,7 @@ namespace LivesteamScrapper.Controllers
                 _browserControllerChat.Dispose();
             }
             timerTask.Dispose();
-            cts.Dispose();
+            Cts.Dispose();
         }
 
         private bool OpenScrapper()
@@ -100,14 +101,14 @@ namespace LivesteamScrapper.Controllers
                 {
                     IsScrapping = false;
                 }
-                return true;
+                return IsScrapping;
             }
             catch (Exception e)
             {
                 ConsoleController.ShowExceptionLog(e.Message);
                 ConsoleController.ShowBrowserLog(EnumsModel.BrowserLog.NotReady);
                 IsScrapping = false;
-                return false;
+                return IsScrapping;
             }
 
         }
@@ -154,53 +155,62 @@ namespace LivesteamScrapper.Controllers
                 StartTimerTasksCancellation(minutes);
 
                 List<Task> tasks = new();
-                tasks.Add(RunViewerGameScrapperAsync(cts.Token));
-                tasks.Add(RunChatScrapperAsync(cts.Token));
+                tasks.Add(RunViewerGameScrapperAsync(Cts.Token));
+                tasks.Add(RunChatScrapperAsync(Cts.Token));
 
                 //Console Tasks
-                tasks.Add(consoleController.RunConsoleAsync(cts.Token, 30));
+                tasks.Add(consoleController.RunConsoleAsync(Cts.Token, 30));
                 mainTasks.AddRange(tasks);
                 await Task.WhenAll(tasks);
             }
 
         }
-        public async Task RunViewerScrapperAsync()
+        public async Task<bool> RunViewerScrapperAsync()
         {
             if (!IsScrapping)
             {
+                
                 bool hasStarted = await Task.Run(() => Start());
-                int count = 4;
+                int count = 3;
 
                 while (!hasStarted && count > 0)
                 {
-                    hasStarted = await Task.Run(() => Start());
-                    count--;
                     await Task.Delay(15000);
+                    count--;
+                    hasStarted = await Task.Run(() => Start());
                 }
 
                 if (hasStarted)
                 {
                     Mode = ScrapperMode.Viewers;
                     List<Task> tasks = new();
-                    tasks.Add(RunViewerGameScrapperAsync(cts.Token));
+                    tasks.Add(RunViewerGameScrapperAsync(Cts.Token));
 
                     //Console Tasks
-                    tasks.Add(consoleController.RunConsoleAsync(cts.Token, 30));
+                    tasks.Add(consoleController.RunConsoleAsync(Cts.Token, 30));
 
                     mainTasks.AddRange(tasks);
-                    await Task.WhenAll(tasks);
-                    await Task.Run(() => Stop());
+                    _ = Task.WhenAll(tasks).ContinueWith((task) => 
+                    { 
+                        Stop(); 
+                    }, TaskScheduler.Default);
+                    return true;
+                }
+                else
+                {
+                    return false;
                 }
             }
             else
             {
                 ConsoleController.ShowScrapperLog(ScrapperLog.Running);
+                return true;
             }
         }
 
         private bool Start()
         {
-            cts = new CancellationTokenSource();
+            Cts = new CancellationTokenSource();
             bool isOpen = OpenScrapper();
 
             if (isOpen)
@@ -220,7 +230,7 @@ namespace LivesteamScrapper.Controllers
             {
                 ConsoleController.ShowScrapperLog(ScrapperLog.Stopped);
             }
-            cts.Cancel();
+            Cts.Cancel();
             IsScrapping = false;
             Mode = ScrapperMode.Off;
             foreach (Task task in mainTasks)
@@ -429,7 +439,7 @@ namespace LivesteamScrapper.Controllers
                             WriteCSV(newList, _environment.Website, this.Livestream, "counters");
                             listCounter = new List<int>();
                         }, CancellationToken.None);
-                        timeController.Lap("Saved highest viewercount on csv");
+
                         flush = false;
 
                         tasksFlush.Add(task);
