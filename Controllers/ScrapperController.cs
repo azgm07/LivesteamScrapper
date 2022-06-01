@@ -153,7 +153,7 @@ namespace LivesteamScrapper.Controllers
                 Mode = ScrapperMode.All;
                 StartTimerTasksCancellation(minutes);
 
-                List<Task> tasks = new List<Task>();
+                List<Task> tasks = new();
                 tasks.Add(RunViewerGameScrapperAsync(cts.Token));
                 tasks.Add(RunChatScrapperAsync(cts.Token));
 
@@ -181,7 +181,7 @@ namespace LivesteamScrapper.Controllers
                 if (hasStarted)
                 {
                     Mode = ScrapperMode.Viewers;
-                    List<Task> tasks = new List<Task>();
+                    List<Task> tasks = new();
                     tasks.Add(RunViewerGameScrapperAsync(cts.Token));
 
                     //Console Tasks
@@ -457,7 +457,7 @@ namespace LivesteamScrapper.Controllers
                 await Task.Run(() =>
                 {
                     string max = string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", currentGame, ",", listCounter.Max().ToString());
-                    List<string> newList = new List<string>();
+                    List<string> newList = new();
                     newList.Add(max);
                     WriteCSV(newList, _environment.Website, this.Livestream, "counters");
                 }, CancellationToken.None);
@@ -626,7 +626,7 @@ namespace LivesteamScrapper.Controllers
                 //Save all remaining messages
                 Task taskMessages = Task.Run(() =>
                 {
-                    List<string> messages = new List<string>();
+                    List<string> messages = new();
                     foreach (var item in chatMessages)
                     {
                         messages.Add(string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", item.Author, ",", item.Content));
@@ -674,7 +674,7 @@ namespace LivesteamScrapper.Controllers
         public string GetUntilSpecial(string text)
         {
             //Get until a special character appear
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             for (int i = 0; i < text.Length; i++)
             {
                 if ((text[i] >= '0' && text[i] <= '9') || (text[i] >= 'A' && text[i] <= 'Z') || (text[i] >= 'a' && text[i] <= 'z') || text[i] == '.' || text[i] == '_')
@@ -743,7 +743,7 @@ namespace LivesteamScrapper.Controllers
         //Handle chat scrapper by environment
         public List<ChatMessageModel> GetChatMessages()
         {
-            ReadOnlyCollection<IWebElement> messages = new(new List<IWebElement>());
+            ReadOnlyCollection<IWebElement> messages;
             List<ChatMessageModel> scrapeMessages = new();
 
             if (_browserController.Browser == null)
@@ -777,7 +777,7 @@ namespace LivesteamScrapper.Controllers
                 //Transform all messages to a list in order
                 foreach (var message in messages)
                 {
-                    ChatMessageModel newMessage = new ChatMessageModel();
+                    ChatMessageModel newMessage = new();
                     string messageAuthor, messageContent;
 
                     try

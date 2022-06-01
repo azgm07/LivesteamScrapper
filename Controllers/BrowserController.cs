@@ -44,7 +44,7 @@ namespace LivesteamScrapper.Controllers
             OpenedUrl = string.Empty;
 
             //Returns a new BrowserPage
-            ChromeOptions options = new ChromeOptions()
+            ChromeOptions options = new()
             {
                 //BinaryLocation = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
             };

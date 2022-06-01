@@ -25,7 +25,7 @@ namespace LivesteamScrapper.Controllers
             ps.Add(("booyah", "wanheda"));
             ps.Add(("booyah", "teus"));
 
-            List<Task> tasks = new List<Task>();
+            List<Task> tasks = new();
             tasks.Add(watcherController.StreamingWatcherAsync(EnumsModel.ScrapperMode.Viewers, ps));
 
             return View();

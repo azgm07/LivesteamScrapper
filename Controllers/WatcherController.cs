@@ -25,7 +25,7 @@ namespace LivesteamScrapper.Controllers
                 if (index < 0)
                 {
                     EnvironmentModel environment = EnvironmentModel.GetEnvironment(website);
-                    ScrapperController scrapperController = new ScrapperController(_logger, environment, channelPath);
+                    ScrapperController scrapperController = new(_logger, environment, channelPath);
                     Stream stream = new(website, channelPath, environment, scrapperController);
                     streams.Add(stream);
                     return true;
@@ -153,7 +153,7 @@ namespace LivesteamScrapper.Controllers
             }
         }
 
-        public async Task<bool> StopStreamScrapperAsync(ScrapperMode scrapperMode, string website, string channelPath)
+        public async Task<bool> StopStreamScrapperAsync(string website, string channelPath)
         {
             try
             {

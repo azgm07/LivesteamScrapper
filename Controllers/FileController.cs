@@ -15,21 +15,17 @@ namespace LivesteamScrapper.Controllers
         //Write CSV lines with a list of strings
         public static void UpdateCsv(string filename, List<string> lines)
         {
-            using (FileStream fs = new FileStream(filename, FileMode.Append, FileAccess.Write))
+            using FileStream fs = new(filename, FileMode.Append, FileAccess.Write);
+            using StreamWriter sw = new (fs);
+            foreach (string line in lines)
             {
-                using (StreamWriter sw = new StreamWriter(fs))
-                {
-                    foreach (string line in lines)
-                    {
-                        sw.WriteLine(line);
-                    }
-                }
+                sw.WriteLine(line);
             }
         }
 
         public static void WriteCsv(string filename, List<string> lines)
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             foreach (var line in lines)
             {
                 sb.AppendLine(line);
