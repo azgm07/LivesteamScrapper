@@ -10,7 +10,7 @@ using System.Text.RegularExpressions;
 
 namespace LivesteamScrapper.Controllers
 {
-    public class BrowserController : Controller
+    public sealed class BrowserController : Controller, IDisposable
     {
         private readonly ILogger<Controller> _logger;
         public bool IsScrapping { get; set; }
@@ -61,8 +61,8 @@ namespace LivesteamScrapper.Controllers
 
             Browser = new ChromeDriver(options);
         }
-        //Finalizer
-        ~BrowserController()
+        //Dispose
+        public new void Dispose()
         {
             if (Browser != null)
             {
