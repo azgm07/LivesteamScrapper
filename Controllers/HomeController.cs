@@ -17,10 +17,17 @@ namespace LivesteamScrapper.Controllers
 
         public IActionResult Index()
         {
-            //Start tasks
+            CancellationTokenSource cts = new();
+            WatcherController watcherController = new(_logger, cts.Token);
+            List<(string, string)> ps = new();
+            ps.Add(("booyah", "vanquilha"));
+            ps.Add(("booyah", "ggeasy"));
+            ps.Add(("booyah", "wanheda"));
+            ps.Add(("booyah", "teus"));
+
             List<Task> tasks = new List<Task>();
-            tasks.Add(StartScrapperAsync("booyah", "vanquilha"));
-            
+            tasks.Add(watcherController.StreamingWatcherAsync(EnumsModel.ScrapperMode.Viewers, ps));
+
             return View();
         }
 
@@ -33,13 +40,6 @@ namespace LivesteamScrapper.Controllers
         public IActionResult Error()
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
-        }
-
-        public async Task StartScrapperAsync(string website, string channelPath)
-        {
-            EnvironmentModel environment = EnvironmentModel.GetEnvironment(website);
-            ScrapperController scrapperController = new ScrapperController(_logger, environment, channelPath);
-            await scrapperController.RunTestAsync(5);
         }
     }
 }

@@ -32,5 +32,13 @@ namespace LivesteamScrapper.Models
             Chat,
             All
         }
+
+        public enum ScrapperStatus
+        {
+            Stopped,
+            Running,
+            Waiting,
+            NotFound
+        }
     }
 }

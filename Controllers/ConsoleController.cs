@@ -4,15 +4,24 @@ using System.Text;
 
 namespace LivesteamScrapper.Controllers
 {
-    public static class ConsoleController
+    public class ConsoleController
     {
-        private static string lineBreak = "------------------------------";
+        private const string lineBreak = "------------------------------";
 
-        public static ChatConsole Chat { get; set; } = new ChatConsole();
-        public static ViewersConsole Viewers { get; set; } = new ViewersConsole();
-        public static GameConsole CurrentGame { get; set; } = new GameConsole();
+        public ChannelConsole Channel { get; set; }
+        public ChatConsole Chat { get; set; }
+        public ViewersConsole Viewers { get; set; }
+        public GameConsole CurrentGame { get; set; }
 
-        public static async Task RunConsoleAsync(CancellationToken token, int delaySeconds = 30)
+        public ConsoleController()
+        {
+            Channel = new ChannelConsole();
+            Chat = new ChatConsole();
+            Viewers = new ViewersConsole();
+            CurrentGame = new GameConsole();
+        }
+
+        public async Task RunConsoleAsync(CancellationToken token, int delaySeconds = 30)
         {
             Console.WriteLine(string.Concat("\n", "Console Started ", lineBreak, "\n"));
             Thread.Sleep(delaySeconds * 1000);
@@ -28,7 +37,7 @@ namespace LivesteamScrapper.Controllers
             Console.WriteLine(string.Concat("\n", "Console Stopped ", lineBreak, "\n"));
         }
 
-        private static void ShowChatLog()
+        private void ShowChatLog()
         {
             ChatConsole chatConsole = Chat;
             if (chatConsole.MessagesFound != -1)
@@ -41,7 +50,7 @@ namespace LivesteamScrapper.Controllers
             }
         }
 
-        private static void ShowViewersLog()
+        private void ShowViewersLog()
         {
             ViewersConsole viewersConsole = Viewers;
             if (viewersConsole.Count != -1)
@@ -50,7 +59,7 @@ namespace LivesteamScrapper.Controllers
             }
         }
 
-        private static void ShowGameLog()
+        private void ShowGameLog()
         {
 
             GameConsole gameConsole = CurrentGame;

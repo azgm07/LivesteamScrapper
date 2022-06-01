@@ -1,5 +1,17 @@
 ﻿namespace LivesteamScrapper.Models
 {
+    public class ChannelConsole
+    {
+        public string Website { get; set; }
+        public string Name { get; set; }
+
+        public ChannelConsole()
+        {
+            Website = string.Empty;
+            Name = string.Empty;
+        }
+    }
+
     public class ChatConsole
     {
         public int MessagesFound { get; set; }
