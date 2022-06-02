@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
+using OpenQA.Selenium.Remote;
 using OpenQA.Selenium.Support.UI;
 using SeleniumExtras.WaitHelpers;
 using System.Collections.Concurrent;
@@ -15,7 +16,7 @@ namespace LivesteamScrapper.Controllers
         private readonly ILogger<Controller> _logger;
         public bool IsScrapping { get; set; }
         public bool IsBrowserOpened { get; set; }
-        public  ChromeDriver Browser { get; private set; }
+        public WebDriver Browser { get; private set; }
         public string OpenedUrl { get; set; }
 
         private bool _isReady;
@@ -52,13 +53,12 @@ namespace LivesteamScrapper.Controllers
             //Change options depending on the case
             if (isHeadless)
             {
-                options.AddArguments(new List<string>() { "headless", "disable-gpu", "no-sandbox", "disable-extensions", "log-level=3" });
+                options.AddArguments(new List<string>() { "headless", "disable-gpu", "no-sandbox", "disable-extensions", "log-level=3", "mute-audio" });
             }
             else
             {
-                options.AddArguments(new List<string>() { /*"headless",*/ "disable-gpu", "no-sandbox", "disable-extensions", "log-level=3" });
+                options.AddArguments(new List<string>() { /*"headless",*/ "disable-gpu", "no-sandbox", "disable-extensions", "log-level=3", "mute-audio" });
             }
-
             Browser = new ChromeDriver(options);
         }
         //Dispose
@@ -118,7 +118,7 @@ namespace LivesteamScrapper.Controllers
             {
                 if (Browser.Url != url)
                 {
-                    IsReady = false;                    
+                    IsReady = false;
                     Browser.Navigate().GoToUrl(url);
                     if (waitSelector != null)
                     {
@@ -134,7 +134,7 @@ namespace LivesteamScrapper.Controllers
                 throw;
             }
         }
-        
+
         public void ReloadBrowserPage(By? waitSelector = null)
         {
             try

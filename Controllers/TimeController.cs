@@ -29,7 +29,7 @@ namespace LivesteamScrapper.Controllers
             LapTime = new List<DateTime>();
             Timer.Start();
             StartTime = DateTime.Now;
-            
+
             ConsoleController.ShowTimeLog(EnumsModel.TimerLog.Start, this, moreInfo);
             return StartTime;
         }

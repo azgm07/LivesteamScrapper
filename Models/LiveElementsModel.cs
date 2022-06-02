@@ -6,12 +6,14 @@ namespace LivesteamScrapper.Models
     {
         public abstract By CloseChatAnnouncement { get; set; }
         public abstract By ChannelName { get; set; }
+        public abstract By OpenLive { get; set; }
     }
 
     public class LiveElementsModel : ILiveElementsInterface
     {
         public By CloseChatAnnouncement { get; set; }
         public By ChannelName { get; set; }
+        public By OpenLive { get; set; }
 
         protected readonly IConfiguration _config;
 
@@ -19,6 +21,7 @@ namespace LivesteamScrapper.Models
         {
             CloseChatAnnouncement = By.TagName(string.Empty);
             ChannelName = By.TagName(string.Empty);
+            OpenLive = By.TagName(string.Empty);
             _config = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
         }
 
@@ -45,6 +48,7 @@ namespace LivesteamScrapper.Models
         {
             CloseChatAnnouncement = By.CssSelector(_config.GetValue<string>($"LiveElements:{this.GetType().Name}:CloseChatAnnouncement"));
             ChannelName = By.CssSelector(_config.GetValue<string>($"LiveElements:{this.GetType().Name}:ChannelName"));
+            OpenLive = By.CssSelector(_config.GetValue<string>($"LiveElements:{this.GetType().Name}:OpenLive"));
         }
     }
 
@@ -54,6 +58,7 @@ namespace LivesteamScrapper.Models
         {
             CloseChatAnnouncement = By.CssSelector(_config.GetValue<string>($"LiveElements:{this.GetType().Name}:CloseChatAnnouncement"));
             ChannelName = By.CssSelector(_config.GetValue<string>($"LiveElements:{this.GetType().Name}:ChannelName"));
+            OpenLive = By.CssSelector(_config.GetValue<string>($"LiveElements:{this.GetType().Name}:OpenLive"));
         }
     }
 
@@ -63,6 +68,7 @@ namespace LivesteamScrapper.Models
         {
             CloseChatAnnouncement = By.CssSelector(_config.GetValue<string>($"LiveElements:{this.GetType().Name}:CloseChatAnnouncement"));
             ChannelName = By.CssSelector(_config.GetValue<string>($"LiveElements:{this.GetType().Name}:ChannelName"));
+            OpenLive = By.CssSelector(_config.GetValue<string>($"LiveElements:{this.GetType().Name}:OpenLive"));
         }
     }
 
@@ -72,6 +78,7 @@ namespace LivesteamScrapper.Models
         {
             CloseChatAnnouncement = By.CssSelector(_config.GetValue<string>($"LiveElements:{this.GetType().Name}:CloseChatAnnouncement"));
             ChannelName = By.CssSelector(_config.GetValue<string>($"LiveElements:{this.GetType().Name}:ChannelName"));
+            OpenLive = By.CssSelector(_config.GetValue<string>($"LiveElements:{this.GetType().Name}:OpenLive"));
         }
     }
 }

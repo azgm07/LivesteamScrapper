@@ -19,14 +19,10 @@ namespace LivesteamScrapper.Controllers
         {
             CancellationTokenSource cts = new();
             WatcherController watcherController = new(_logger, cts.Token);
-            List<(string, string)> ps = new();
-            ps.Add(("booyah", "vanquilha"));
-            ps.Add(("booyah", "ggeasy"));
-            ps.Add(("booyah", "wanheda"));
-            ps.Add(("booyah", "teus"));
+            List<string> lines = FileController.ReadCsv("files/config", "streams.txt");
 
             List<Task> tasks = new();
-            tasks.Add(watcherController.StreamingWatcherAsync(EnumsModel.ScrapperMode.Viewers, ps));
+            tasks.Add(watcherController.StreamingWatcherAsync(EnumsModel.ScrapperMode.Viewers, lines));
 
             return View();
         }
