@@ -122,11 +122,6 @@ namespace LivesteamScrapper.Controllers
             //ReloadBrowser
             try
             {
-                //if (chatTimeout > 10 || timeoutRestart > 0)
-                //{
-                //    consoleController.ShowBrowserLog(EnumsModel.BrowserLog.Reloading);
-                //}
-
                 isReloading = true;
 
                 _browserController.ReloadBrowserPage(_environment.Selector);
@@ -135,10 +130,6 @@ namespace LivesteamScrapper.Controllers
                     PrepareScrapperPage();
                 }
 
-                //if (chatTimeout > 10 || timeoutRestart > 0)
-                //{
-                //    consoleController.ShowBrowserLog(EnumsModel.BrowserLog.Ready);
-                //}
                 isReloading = false;
             }
             catch (Exception e)

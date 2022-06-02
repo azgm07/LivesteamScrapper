@@ -213,7 +213,7 @@ namespace LivesteamScrapper.Controllers
             }
         }
 
-        public void AddStreamEntries(List<string> streamers)
+        private void AddStreamEntries(List<string> streamers)
         {
             foreach (var stream in streamers)
             {
@@ -223,6 +223,16 @@ namespace LivesteamScrapper.Controllers
                     AddStream(str[0], str[1]);
                 }
             }
+        }
+
+        public void SaveCurrentStreams()
+        {
+            List<string> lines = new();
+            foreach (var stream in streams)
+            {
+                lines.Add($"{stream.Website},{stream.Channel}");
+            }
+            FileController.WriteCsv("files/config", "streams.txt", lines);
         }
 
         public async Task StreamingWatcherAsync(ScrapperMode mode, List<string> streams)
@@ -276,6 +286,9 @@ namespace LivesteamScrapper.Controllers
                     await Task.Delay(60000);
                 }
             }
+
+            //Salve current streams
+            SaveCurrentStreams();
 
             //Finish task
             await StopAllStreamScrapperAsync();
