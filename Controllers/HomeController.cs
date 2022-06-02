@@ -18,11 +18,20 @@ namespace LivesteamScrapper.Controllers
         public IActionResult Index()
         {
             CancellationTokenSource cts = new();
-            WatcherController watcherController = new(_logger, cts.Token);
+            WatcherController watcherController = new(_logger, EnumsModel.ScrapperMode.Viewers, cts.Token);
             List<string> lines = FileController.ReadCsv("files/config", "streams.txt");
 
             List<Task> tasks = new();
-            tasks.Add(watcherController.StreamingWatcherAsync(EnumsModel.ScrapperMode.Viewers, lines));
+            tasks.Add(watcherController.StreamingWatcherAsync(lines));
+
+            tasks.Add(Task.Run(async () => 
+            {
+                //await Task.Delay(75000);
+                //watcherController.AddStream("booyah", "leet");
+                await Task.Delay(90000);
+                cts.Cancel();
+
+            }, CancellationToken.None));
 
             return View();
         }
