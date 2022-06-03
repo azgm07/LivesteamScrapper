@@ -1,6 +1,5 @@
 ﻿using LivesteamScrapper.Models;
 using Microsoft.AspNetCore.Mvc;
-using System.Collections.Concurrent;
 using static LivesteamScrapper.Models.EnumsModel;
 
 namespace LivesteamScrapper.Controllers
@@ -10,10 +9,10 @@ namespace LivesteamScrapper.Controllers
         private readonly List<Stream> listStreams;
 
         private readonly CancellationToken ct;
-        private readonly ILogger<HomeController> _logger;
+        private readonly ILogger<Controller>? _logger;
         private readonly ScrapperMode scrapperMode;
 
-        public WatcherController(ILogger<HomeController> logger, ScrapperMode mode, CancellationToken token)
+        public WatcherController(ScrapperMode mode, CancellationToken token, ILogger<Controller>? logger = null)
         {
             _logger = logger;
             ct = token;
@@ -29,7 +28,7 @@ namespace LivesteamScrapper.Controllers
                 if (index < 0)
                 {
                     EnvironmentModel environment = EnvironmentModel.GetEnvironment(website);
-                    ScrapperController scrapperController = new(_logger, environment, channelPath);
+                    ScrapperController scrapperController = new(environment, channelPath, _logger);
                     Stream stream = new(website, channelPath, environment, scrapperController);
                     stream.Status = ScrapperStatus.Running;
                     listStreams.Add(stream);

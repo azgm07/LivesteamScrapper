@@ -45,19 +45,14 @@ namespace LivesteamScrapper.Models
 
         public static EnvironmentModel GetEnvironment(string website = "")
         {
-            switch (website.ToLower())
+            return website.ToLower() switch
             {
-                case "booyah":
-                    return new Booyah();
-                case "facebook":
-                    return new Facebook();
-                case "twitch":
-                    return new Twitch();
-                case "youtube":
-                    return new Youtube();
-                default:
-                    return new EnvironmentModel();
-            }
+                "booyah" => new Booyah(),
+                "facebook" => new Facebook(),
+                "twitch" => new Twitch(),
+                "youtube" => new Youtube(),
+                _ => new EnvironmentModel(),
+            };
         }
     }
     public class Booyah : EnvironmentModel

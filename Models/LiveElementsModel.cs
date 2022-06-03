@@ -27,19 +27,14 @@ namespace LivesteamScrapper.Models
 
         public static LiveElementsModel GetElements(string website = "")
         {
-            switch (website.ToLower())
+            return website.ToLower() switch
             {
-                case "booyah":
-                    return new BooyahElements();
-                case "facebook":
-                    return new FacebookElements();
-                case "twitch":
-                    return new TwitchElements();
-                case "youtube":
-                    return new YoutubeElements();
-                default:
-                    return new LiveElementsModel();
-            }
+                "booyah" => new BooyahElements(),
+                "facebook" => new FacebookElements(),
+                "twitch" => new TwitchElements(),
+                "youtube" => new YoutubeElements(),
+                _ => new LiveElementsModel(),
+            };
         }
     }
     public class BooyahElements : LiveElementsModel

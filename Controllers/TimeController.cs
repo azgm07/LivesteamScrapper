@@ -11,9 +11,9 @@ namespace LivesteamScrapper.Controllers
         public string From { get; private set; }
         public System.Timers.Timer Timer { get; private set; }
 
-        private readonly ILogger<Controller> _logger;
+        private readonly ILogger<Controller>? _logger;
 
-        public TimeController(ILogger<Controller> logger, string from)
+        public TimeController(string from, ILogger<Controller>? logger = null)
         {
             _logger = logger;
             StartTime = new DateTime();

@@ -2,23 +2,18 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.VisualStudio.Threading;
 using OpenQA.Selenium;
-using OpenQA.Selenium.Chrome;
-using OpenQA.Selenium.Interactions;
-using OpenQA.Selenium.Support.UI;
-using SeleniumExtras.WaitHelpers;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
-using System.Drawing;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Timers;
+
 using static LivesteamScrapper.Models.EnumsModel;
 
 namespace LivesteamScrapper.Controllers
 {
     public sealed class ScrapperController : Controller, IDisposable
     {
-        private readonly ILogger<Controller> _logger;
+        private readonly ILogger<Controller>? _logger;
 
         public bool IsScrapping { get; private set; }
         public readonly EnvironmentModel _environment;
@@ -42,7 +37,7 @@ namespace LivesteamScrapper.Controllers
         public string Livestream { get; set; }
 
         //Constructor
-        public ScrapperController(ILogger<Controller> logger, EnvironmentModel environment, string livestream)
+        public ScrapperController(EnvironmentModel environment, string livestream, ILogger<Controller>? logger = null)
         {
             _logger = logger;
             _environment = environment;
@@ -78,7 +73,7 @@ namespace LivesteamScrapper.Controllers
             {
                 if (_browserController == null)
                 {
-                    _browserController = new(_logger);
+                    _browserController = new(true, _logger);
                 }
                 switch (_environment.Website)
                 {
@@ -129,7 +124,7 @@ namespace LivesteamScrapper.Controllers
 
                 if (_browserController == null)
                 {
-                    _browserController = new(_logger);
+                    _browserController = new(true, _logger);
                 }
 
                 _browserController.ReloadBrowserPage(_environment.Selector);
@@ -396,7 +391,7 @@ namespace LivesteamScrapper.Controllers
         public async Task RunViewerGameScrapperAsync(CancellationToken token)
         {
             //Controllers
-            TimeController timeController = new(_logger, "RunViewerScrapper");
+            TimeController timeController = new("RunViewerScrapper", _logger);
 
             //Loop scrapping per sec.
             timeController.Start();
@@ -534,7 +529,7 @@ namespace LivesteamScrapper.Controllers
         {
 
             //Controllers
-            TimeController timeController = new(_logger, "RunChatScrapper");
+            TimeController timeController = new("RunChatScrapper", _logger);
 
             //Variables
             List<ChatMessageModel> chatMessages = new();
@@ -768,7 +763,7 @@ namespace LivesteamScrapper.Controllers
                         //Open chat in aux browser page
                         if (_browserControllerChat == null)
                         {
-                            _browserControllerChat = new BrowserController(_logger, false);
+                            _browserControllerChat = new BrowserController(false, _logger);
                         }
                         else
                         {
@@ -798,7 +793,7 @@ namespace LivesteamScrapper.Controllers
                         //Open chat in aux browser page
                         if (_browserControllerChat == null)
                         {
-                            _browserControllerChat = new BrowserController(_logger, false);
+                            _browserControllerChat = new BrowserController(false, _logger);
                         }
                         url = _environment.Http + "popout/" + Livestream + "/chat?popout=";
                         _browserControllerChat.OpenBrowserPage(url, null);
@@ -832,7 +827,7 @@ namespace LivesteamScrapper.Controllers
                         //To Iframe
                         if (_browserControllerChat == null)
                         {
-                            _browserControllerChat = new BrowserController(_logger, false);
+                            _browserControllerChat = new BrowserController(false, _logger);
                         }
                         browserAux = _browserControllerChat.Browser;
                         messages = browserAux.FindElements(_environment.MessageContainer);

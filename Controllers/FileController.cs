@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using System.Text;
 
 namespace LivesteamScrapper.Controllers
 {
@@ -51,6 +50,11 @@ namespace LivesteamScrapper.Controllers
             if (!Directory.Exists(sFullPath))
             {
                 Directory.CreateDirectory(sFullPath);
+            }
+
+            if (!System.IO.File.Exists(sFilePath))
+            {
+                System.IO.File.Create(sFilePath);
             }
 
             if (System.IO.File.Exists(sFilePath))

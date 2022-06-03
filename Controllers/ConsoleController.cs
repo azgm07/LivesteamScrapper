@@ -1,6 +1,4 @@
 ﻿using LivesteamScrapper.Models;
-using Microsoft.AspNetCore.Mvc;
-using System.Text;
 
 namespace LivesteamScrapper.Controllers
 {
@@ -172,6 +170,11 @@ namespace LivesteamScrapper.Controllers
         public static void ShowExceptionLog(string entity, string message)
         {
             Console.WriteLine($"|{DateTime.Now}| Exception on {entity} : {message}" + "\n" + lineBreak);
+        }
+
+        public static void ShowWarningLog(string entity, string message)
+        {
+            Console.WriteLine($"|{DateTime.Now}| Warning on {entity} : {message}" + "\n" + lineBreak);
         }
     }
 }
