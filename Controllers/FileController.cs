@@ -52,11 +52,6 @@ namespace LivesteamScrapper.Controllers
                 Directory.CreateDirectory(sFullPath);
             }
 
-            if (!System.IO.File.Exists(sFilePath))
-            {
-                System.IO.File.Create(sFilePath);
-            }
-
             if (System.IO.File.Exists(sFilePath))
             {
                 using var reader = new StreamReader(sFilePath);
