@@ -36,7 +36,7 @@ namespace LivesteamScrapper.Controllers
                 string joined = string.Join(" | ", strings);
                 Console.WriteLine(string.Concat($"|{ DateTime.Now}| ", joined, "\n", lineBreak));
 
-                await Task.Delay(delaySeconds * 1000);
+                await Task.Delay(delaySeconds * 1000).ConfigureAwait(false);
             }
 
             Console.WriteLine(string.Concat($"|{DateTime.Now}| ", "Console Stopped ", "\n", lineBreak));

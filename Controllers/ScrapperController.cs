@@ -27,7 +27,7 @@ namespace LivesteamScrapper.Controllers
         public CancellationTokenSource Cts { get; private set; }
 
 
-        private readonly BrowserController _browserController;
+        private BrowserController? _browserController;
         private BrowserController? _browserControllerChat;
         private readonly ConsoleController consoleController;
 
@@ -47,7 +47,7 @@ namespace LivesteamScrapper.Controllers
             _logger = logger;
             _environment = environment;
             Livestream = livestream;
-            _browserController = new(logger);
+            _browserController = null;
             _browserControllerChat = null;
             consoleController = new();
             timerTask = new();
@@ -69,16 +69,6 @@ namespace LivesteamScrapper.Controllers
         public new void Dispose()
         {
             Stop();
-            if (_browserController != null)
-            {
-                _browserController.Dispose();
-            }
-            if (_browserControllerChat != null)
-            {
-                _browserControllerChat.Dispose();
-            }
-            timerTask.Dispose();
-            Cts.Dispose();
         }
 
         private bool OpenScrapper()
@@ -86,7 +76,20 @@ namespace LivesteamScrapper.Controllers
             //OpenBrowser
             try
             {
-                _browserController.OpenBrowserPage(_environment.Http + Livestream, _environment.Selector);
+                if (_browserController == null)
+                {
+                    _browserController = new(_logger);
+                }
+                switch (_environment.Website)
+                {
+                    case "facebook": case "youtube":
+                        _browserController.OpenBrowserPage($"{_environment.Http}{Livestream}/live", _environment.Selector);
+                        break;
+                    default:
+                        _browserController.OpenBrowserPage($"{_environment.Http}{Livestream}", _environment.Selector);
+                        break;
+                }
+
                 if (_browserController.IsReady && _browserController.Browser != null)
                 {
                     try
@@ -123,6 +126,11 @@ namespace LivesteamScrapper.Controllers
             try
             {
                 isReloading = true;
+
+                if (_browserController == null)
+                {
+                    _browserController = new(_logger);
+                }
 
                 _browserController.ReloadBrowserPage(_environment.Selector);
                 if (_browserController.IsReady && _browserController.Browser != null)
@@ -230,17 +238,24 @@ namespace LivesteamScrapper.Controllers
 
         public void Stop()
         {
-            if (IsScrapping)
-            {
-                consoleController.ShowScrapperLog(ScrapperLog.Stopped);
-            }
             Cts.Cancel();
             IsScrapping = false;
             Mode = ScrapperMode.Off;
 
+            if (_browserController != null)
+            {
+                _browserController.Dispose();
+                _browserController = null;
+            }
+
             for (int i = 0; i < mainTasks.Count; i++)
             {
                 _ = mainTasks.Take();
+            }
+
+            if (IsScrapping)
+            {
+                consoleController.ShowScrapperLog(ScrapperLog.Stopped);
             }
         }
 
@@ -259,7 +274,7 @@ namespace LivesteamScrapper.Controllers
         public (List<ChatMessageModel>, int lastIndex) ReadChat()
         {
             //Verify if the browser is already open with a page
-            if (_browserController.Browser == null)
+            if (_browserController == null || _browserController.Browser == null)
             {
                 return (new List<ChatMessageModel>(), -1);
             }
@@ -312,7 +327,7 @@ namespace LivesteamScrapper.Controllers
         public int? ReadViewerCounter()
         {
             //Verify if the browser is already open with a page
-            if (_browserController.Browser == null)
+            if (_browserController == null || _browserController.Browser == null)
             {
                 return null;
             }
@@ -357,7 +372,7 @@ namespace LivesteamScrapper.Controllers
         public string? ReadCurrentGame()
         {
             //Verify if the browser is already open with a page
-            if (_browserController.Browser == null)
+            if (_browserController == null || _browserController.Browser == null)
             {
                 return null;
             }
@@ -708,17 +723,9 @@ namespace LivesteamScrapper.Controllers
 
         public void WriteData(List<string> lines, string website, string livestream, string type, bool startNew = false)
         {
-            string folder = @"files\csv";
             string file = $"{GetUntilSpecial(website.ToLower())}-{GetUntilSpecial(livestream.ToLower())}-{type}.csv";
 
-            if (startNew)
-            {
-                FileController.WriteCsv(folder, file, lines);
-            }
-            else
-            {
-                FileController.UpdateCsv(folder, file, lines);
-            }
+            FileController.WriteCsv("files/csv", file, lines, startNew);
         }
 
         public string GetUntilSpecial(string text)
@@ -749,8 +756,11 @@ namespace LivesteamScrapper.Controllers
                     chatTimeout = 5000;
                     timeoutRestart = 10000;
 
-                    _browserController.WaitUntilElementClickable(LiveElementsModel.GetElements(_environment.Website).OpenLive).Click();
-                    _browserController.WaitUntilElementClickable(LiveElementsModel.GetElements(_environment.Website).CloseChatAnnouncement).Click();
+                    if (_browserController != null)
+                    {
+                        _browserController.WaitUntilElementClickable(LiveElementsModel.GetElements(_environment.Website).OpenLive).Click();
+                        _browserController.WaitUntilElementClickable(LiveElementsModel.GetElements(_environment.Website).CloseChatAnnouncement).Click();
+                    }
                     break;
                 case "youtube":
                     if (Mode == ScrapperMode.All || Mode == ScrapperMode.Chat)
@@ -769,7 +779,7 @@ namespace LivesteamScrapper.Controllers
                     }
 
                     //Change the name to channel name
-                    if (_browserController.Browser != null)
+                    if (_browserController != null && _browserController.Browser != null)
                     {
                         try
                         {
@@ -805,7 +815,7 @@ namespace LivesteamScrapper.Controllers
             ReadOnlyCollection<IWebElement> messages;
             List<ChatMessageModel> scrapeMessages = new();
 
-            if (_browserController.Browser == null)
+            if (_browserController == null || _browserController.Browser == null)
             {
                 return new List<ChatMessageModel>();
             }

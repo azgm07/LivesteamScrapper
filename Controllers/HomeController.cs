@@ -24,16 +24,19 @@ namespace LivesteamScrapper.Controllers
             List<Task> tasks = new();
             tasks.Add(watcherController.StreamingWatcherAsync(lines));
 
-            tasks.Add(Task.Run(async () => 
+            tasks.Add(Task.Run(async () =>
             {
-                await Task.Delay(30000);
-                watcherController.AddStream("booyah", "leet");
-                await Task.Delay(120000);
-                watcherController.RemoveStream("booyah", "leet");
-                await Task.Delay(60000);
-                await Task.Run(() => watcherController.StopAllStreamScrapper());
-                await Task.Delay(60000);
-                await Task.Run(() => watcherController.StartAllStreamScrapper());
+                await Task.Delay(300000);
+                //Console.WriteLine("\n-------------------> Adding new Stream\n");
+                //await Task.Run(() => watcherController.AddStream("twitch", "yetz"));
+                //await Task.Delay(180000);
+                //Console.WriteLine("\n-------------------> Remove new Stream\n");
+                //await Task.Run(() => watcherController.RemoveStream("twitch", "yetz"));
+                //await Task.Delay(180000);
+                //Console.WriteLine("\n-------------------> Start new Stream\n");
+                //await Task.Run(() => watcherController.AddStream("twitch", "yetz"));
+                //await Task.Delay(180000);
+                //Console.WriteLine("\n-------------------> Cancelling the watcher execution\n");
                 cts.Cancel();
 
             }, CancellationToken.None));
