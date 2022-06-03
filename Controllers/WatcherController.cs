@@ -7,7 +7,7 @@ namespace LivesteamScrapper.Controllers
 {
     public class WatcherController : Controller
     {
-        private static BlockingCollection<Stream> blockingStreams = new();
+        private readonly List<Stream> listStreams;
 
         private readonly CancellationToken ct;
         private readonly ILogger<HomeController> _logger;
@@ -18,20 +18,20 @@ namespace LivesteamScrapper.Controllers
             _logger = logger;
             ct = token;
             scrapperMode = mode;
+            listStreams = new();
         }
 
         public bool AddStream(string website, string channelPath)
         {
             try
-            {
-                List<Stream> streams = blockingStreams.ToList();
-                int index = streams.FindIndex(stream => stream.Website == website && stream.Channel == channelPath);
+            {                
+                int index = listStreams.FindIndex(stream => stream.Website == website && stream.Channel == channelPath);
                 if (index < 0)
                 {
                     EnvironmentModel environment = EnvironmentModel.GetEnvironment(website);
                     ScrapperController scrapperController = new(_logger, environment, channelPath);
                     Stream stream = new(website, channelPath, environment, scrapperController);
-                    blockingStreams.Add(stream);
+                    listStreams.Add(stream);
                     _ = Task.Run(() => StartStreamScrapperAsync(website, channelPath));
                     return true;
                 }
@@ -47,20 +47,19 @@ namespace LivesteamScrapper.Controllers
             }
         }
 
-        public static bool RemoveStream(string website, string channelPath)
+        public bool RemoveStream(string website, string channelPath)
         {
             try
             {
-                List<Stream> streams = blockingStreams.ToList();
-                int index = streams.FindIndex(stream => stream.Website == website && stream.Channel == channelPath);
+                int index = listStreams.FindIndex(stream => stream.Website == website && stream.Channel == channelPath);
                 if (index < 0)
                 {
                     return false;
                 }
                 else
                 {
-                    streams[index].Scrapper.Dispose();
-                    blockingStreams = new BlockingCollection<Stream>(new ConcurrentQueue<Stream>(streams));
+                    listStreams[index].Scrapper.Dispose();
+                    listStreams.RemoveAt(index);
                     return true;
                 }
             }
@@ -74,15 +73,14 @@ namespace LivesteamScrapper.Controllers
 
         public ScrapperStatus GetUpdatedStatus(string website, string channelPath)
         {
-            List<Stream> streams = blockingStreams.ToList();
-            int index = streams.FindIndex(stream => stream.Website == website && stream.Channel == channelPath);
+            int index = listStreams.FindIndex(stream => stream.Website == website && stream.Channel == channelPath);
             if (index < 0)
             {
                 return ScrapperStatus.NotFound;
             }
             else
             {
-                return streams[index].Status;
+                return listStreams[index].Status;
             }
         }
 
@@ -90,22 +88,22 @@ namespace LivesteamScrapper.Controllers
         {
             try
             {
-                List<Stream> streams = blockingStreams.ToList();
-                int index = streams.FindIndex(stream => stream.Website == website && stream.Channel == channelPath);
+                bool result = false;
+                int index = listStreams.FindIndex(stream => stream.Website == website && stream.Channel == channelPath);
                 if (index < 0)
                 {
                     return false;
                 }
                 else
                 {
-                    if (!streams[index].Scrapper.IsScrapping)
+                    if (!listStreams[index].Scrapper.IsScrapping)
                     {
                         switch (scrapperMode)
                         {
                             case ScrapperMode.Off:
                                 break;
                             case ScrapperMode.Viewers:
-                                await streams[index].Scrapper.RunViewerScrapperAsync();
+                                result = await listStreams[index].Scrapper.RunViewerScrapperAsync();
                                 break;
                             case ScrapperMode.Chat:
                                 break;
@@ -114,9 +112,8 @@ namespace LivesteamScrapper.Controllers
                             default:
                                 break;
                         }
-                        streams[index].Status = ScrapperStatus.Running;
                     }
-                    return true;
+                    return result;
                 }
             }
             catch (Exception e)
@@ -131,7 +128,7 @@ namespace LivesteamScrapper.Controllers
             try
             {
                 List<Action> actions = new();
-                foreach (var stream in blockingStreams)
+                foreach (var stream in listStreams)
                 {
                     if (!stream.Scrapper.IsScrapping)
                     {
@@ -153,18 +150,17 @@ namespace LivesteamScrapper.Controllers
         {
             try
             {
-                List<Stream> streams = blockingStreams.ToList();
-                int index = streams.FindIndex(stream => stream.Website == website && stream.Channel == channelPath);
+                int index = listStreams.FindIndex(stream => stream.Website == website && stream.Channel == channelPath);
                 if (index < 0)
                 {
                     return false;
                 }
                 else
                 {
-                    if (streams[index].Scrapper.IsScrapping)
+                    if (listStreams[index].Scrapper.IsScrapping)
                     {
-                        await Task.Run(() => streams[index].Scrapper.Stop());
-                        streams[index].Status = ScrapperStatus.Stopped;
+                        await Task.Run(() => listStreams[index].Scrapper.Stop());
+                        listStreams[index].Status = ScrapperStatus.Stopped;
                     }
                     return true;
                 }
@@ -180,15 +176,16 @@ namespace LivesteamScrapper.Controllers
         {
             try
             {
-                List<Stream> streams = new(blockingStreams);
-                foreach (var stream in streams)
+                List<Action> actions = new();
+                foreach (var stream in listStreams)
                 {
-                    if (stream.Scrapper.IsScrapping)
+                    actions.Add(() =>
                     {
                         stream.Scrapper.Stop();
                         stream.Status = ScrapperStatus.Stopped;
-                    }
+                    });
                 }
+                Parallel.Invoke(actions.ToArray());
             }
             catch (Exception e)
             {
@@ -210,9 +207,8 @@ namespace LivesteamScrapper.Controllers
 
         public void SaveCurrentStreams()
         {
-            List<Stream> streams = blockingStreams.ToList();
             List<string> lines = new();
-            foreach (var stream in streams)
+            foreach (var stream in listStreams)
             {
                 lines.Add($"{stream.Website},{stream.Channel}");
             }
@@ -229,10 +225,10 @@ namespace LivesteamScrapper.Controllers
             {
                 try
                 {
-                    List<Stream> streamsList = blockingStreams.ToList();
-                    if (streamsList.Count > 0)
+                    if (listStreams.Count > 0)
                     {
-                        foreach (var stream in streamsList)
+                        List<Stream> streamsCopy = new(listStreams);
+                        foreach (var stream in streamsCopy)
                         {
                             if (stream.Status == ScrapperStatus.Running)
                             {
@@ -246,6 +242,13 @@ namespace LivesteamScrapper.Controllers
                                     stream.WaitTime = DateTime.Now;
                                 }
                             }
+                            else if (stream.Status == ScrapperStatus.Stopped)
+                            {
+                                if (stream.Scrapper.IsScrapping)
+                                {
+                                    stream.Status = ScrapperStatus.Running;
+                                }
+                            }
                             else if (stream.Status == ScrapperStatus.Waiting)
                             {
                                 TimeSpan timeSpan = DateTime.Now - stream.WaitTime;
@@ -256,7 +259,7 @@ namespace LivesteamScrapper.Controllers
                                 }
                             }
 
-                            await Task.Delay(60000 / streamsList.Count, ct);
+                            await Task.Delay(60000 / listStreams.Count, ct);
                         }
                     }
                     else
@@ -275,10 +278,6 @@ namespace LivesteamScrapper.Controllers
 
             //Finish task
             await Task.Run(() => StopAllStreamScrapper());
-
-            //Test
-            await Task.Delay(15000);
-            await Task.Run(() => StartAllStreamScrapper());
         }
     }
 

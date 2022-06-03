@@ -37,7 +37,7 @@ namespace LivesteamScrapper.Controllers
         private int messagesFound;
         private int chatTimeout;
         private int timeoutRestart;
-        private readonly List<Task> mainTasks;
+        private readonly BlockingCollection<Task> mainTasks;
 
         public string Livestream { get; set; }
 
@@ -155,7 +155,12 @@ namespace LivesteamScrapper.Controllers
 
                 //Console Tasks
                 tasks.Add(consoleController.RunConsoleAsync(Cts.Token, 30));
-                mainTasks.AddRange(tasks);
+
+                foreach (var item in tasks)
+                {
+                    mainTasks.Add(item);
+                }
+
                 await Task.WhenAll(tasks);
             }
 
@@ -184,7 +189,11 @@ namespace LivesteamScrapper.Controllers
                     //Console Tasks
                     tasks.Add(consoleController.RunConsoleAsync(Cts.Token, 30));
 
-                    mainTasks.AddRange(tasks);
+                    foreach (var item in tasks)
+                    {
+                        mainTasks.Add(item);
+                    }
+
                     _ = Task.WhenAll(tasks).ContinueWith((task) =>
                     {
                         Stop();
@@ -228,9 +237,10 @@ namespace LivesteamScrapper.Controllers
             Cts.Cancel();
             IsScrapping = false;
             Mode = ScrapperMode.Off;
-            foreach (Task task in mainTasks)
+
+            for (int i = 0; i < mainTasks.Count; i++)
             {
-                mainTasks.Remove(task);
+                _ = mainTasks.Take();
             }
         }
 

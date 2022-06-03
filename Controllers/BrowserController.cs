@@ -122,7 +122,7 @@ namespace LivesteamScrapper.Controllers
                     Browser.Navigate().GoToUrl(url);
                     if (waitSelector != null)
                     {
-                        WaitUntilElementExists(waitSelector, 30);
+                        WaitUntilElementExists(waitSelector);
                     }
                     OpenedUrl = url;
                     IsReady = true;

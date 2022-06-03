@@ -26,9 +26,14 @@ namespace LivesteamScrapper.Controllers
 
             tasks.Add(Task.Run(async () => 
             {
-                //await Task.Delay(75000);
-                //watcherController.AddStream("booyah", "leet");
-                await Task.Delay(90000);
+                await Task.Delay(30000);
+                watcherController.AddStream("booyah", "leet");
+                await Task.Delay(120000);
+                watcherController.RemoveStream("booyah", "leet");
+                await Task.Delay(60000);
+                await Task.Run(() => watcherController.StopAllStreamScrapper());
+                await Task.Delay(60000);
+                await Task.Run(() => watcherController.StartAllStreamScrapper());
                 cts.Cancel();
 
             }, CancellationToken.None));
