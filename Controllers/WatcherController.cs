@@ -239,6 +239,7 @@ namespace LivesteamScrapper.Controllers
             //Setup Debugger
             Dictionary<string, List<string>> debugData = new();
             debugData.Add($"Times", new List<string>());
+            int debugCounter = 10;
 
             //Check and update
             while (!ct.IsCancellationRequested)
@@ -252,7 +253,10 @@ namespace LivesteamScrapper.Controllers
                         List<Task> debugTasks = new();
 
                         //Debug create new time
-                        await Task.Run(() => debugData["Times"].Add($"{DateTime.Now:dd/MM/yyyy HH:mm:ss}"));
+                        if(debugCounter <= 0)
+                        {
+                            await Task.Run(() => debugData["Times"].Add($"{DateTime.Now:dd/MM/yyyy HH:mm:ss}"));
+                        }
 
                         foreach (var stream in streamsCopy)
                         {
@@ -267,45 +271,55 @@ namespace LivesteamScrapper.Controllers
                             }
 
                             //Debug add status
-                            debugTasks.Add(Task.Run(() =>
+                            //Debug create new time
+                            if (debugCounter <= 0)
                             {
-                                if (!debugData.ContainsKey($"{stream.Website},{stream.Channel}"))
+                                debugTasks.Add(Task.Run(() =>
                                 {
-                                    debugData.Add($"{stream.Website},{stream.Channel}", new List<string>());
-                                }
-                                for (int i = debugData[$"{stream.Website},{stream.Channel}"].Count; i < debugData["Times"].Count - 1; i++)
-                                {
-                                    debugData[$"{stream.Website},{stream.Channel}"].Add("");
-                                }
-                                debugData[$"{stream.Website},{stream.Channel}"].Add(stream.Status.ToString());
-                            }));
+                                    if (!debugData.ContainsKey($"{stream.Website},{stream.Channel}"))
+                                    {
+                                        debugData.Add($"{stream.Website},{stream.Channel}", new List<string>());
+                                    }
+                                    for (int i = debugData[$"{stream.Website},{stream.Channel}"].Count; i < debugData["Times"].Count - 1; i++)
+                                    {
+                                        debugData[$"{stream.Website},{stream.Channel}"].Add("");
+                                    }
+                                    debugData[$"{stream.Website},{stream.Channel}"].Add(stream.Status.ToString());
+                                }));
+                            }
                         }
 
                         await Task.WhenAll(debugTasks);
 
                         //Debug flush out
-                        await Task.Run(() =>
+                        //Debug create new time
+                        if (debugCounter <= 0)
                         {
-                            try
+                            await Task.Run(() =>
                             {
-                                Dictionary<string, List<string>> debugCopy = new(debugData);
-                                List<string> lines = new();
-                                lines.Add($"Streams,{string.Join(",", debugCopy["Times"])}");
-                                foreach (string item in debugCopy.Keys)
+                                try
                                 {
-                                    if (item != "Times")
+                                    Dictionary<string, List<string>> debugCopy = new(debugData);
+                                    List<string> lines = new();
+                                    lines.Add($"Streams,{string.Join(",", debugCopy["Times"])}");
+                                    foreach (string item in debugCopy.Keys)
                                     {
-                                        lines.Add($"{item},{string.Join(",", debugCopy[item])}");
+                                        if (item != "Times")
+                                        {
+                                            lines.Add($"{item},{string.Join(",", debugCopy[item])}");
+                                        }
                                     }
+                                    FileController.WriteCsv("files/debug", "status.csv", lines, true);
                                 }
-                                FileController.WriteCsv("files/debug", "status.csv", lines, true);
-                            }
                             catch (Exception e)
                             {
                                 ConsoleController.ShowExceptionLog("StreamingWatcherAsync->Debug", e.Message);
                             }
                         });
+                            debugCounter = 10;
+                        }
 
+                        debugCounter--;
                         int delay = 60000 - (int)(DateTime.Now - start).TotalMilliseconds;
                         await Task.Delay(delay, ct);
                     }
