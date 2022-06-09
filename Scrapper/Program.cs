@@ -1,8 +1,7 @@
-using LivesteamScrapper.Controllers;
-using LivesteamScrapper.Models;
-using LivesteamScrapper.Services;
+using Scrapper.Controllers;
 using Microsoft.AspNetCore.Mvc;
-
+using Scrapper.Models;
+using Scrapper.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
@@ -57,23 +56,5 @@ if(file != null && watcher != null)
     }
     _ = Task.Run(() => watcher.StreamingWatcherAsync(lines, EnumsModel.ScrapperMode.Viewers, cts.Token));
 }
-
-//Test Task
-//tasks.Add(Task.Run(async () =>
-//{
-//    await Task.Delay(300000);
-//    //Console.WriteLine("\n-------------------> Adding new Stream\n");
-//    //await Task.Run(() => watcherController.AddStream("twitch", "yetz"));
-//    //await Task.Delay(180000);
-//    //Console.WriteLine("\n-------------------> Remove new Stream\n");
-//    //await Task.Run(() => watcherController.RemoveStream("twitch", "yetz"));
-//    //await Task.Delay(180000);
-//    //Console.WriteLine("\n-------------------> Start new Stream\n");
-//    //await Task.Run(() => watcherController.AddStream("twitch", "yetz"));
-//    //await Task.Delay(180000);
-//    //Console.WriteLine("\n-------------------> Cancelling the watcher execution\n");
-//    cts.Cancel();
-
-//}, CancellationToken.None));
 
 app.Run();

@@ -5,6 +5,7 @@
     "**/jspm_packages",
     "**/node_modules",
     "**/obj",
-    "**/platforms"
+    "**/platforms",
+    "**/UnitTests"
   ]
 }
