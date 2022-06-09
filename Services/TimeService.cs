@@ -1,36 +1,48 @@
-﻿using LivesteamScrapper.Models;
-using Microsoft.AspNetCore.Mvc;
-
-namespace LivesteamScrapper.Controllers
+﻿namespace LivesteamScrapper.Services
 {
-    public class TimeController : Controller
+    public interface ITimeService
     {
-        public DateTime StartTime { get; set; }
-        public DateTime StopTime { get; set; }
-        public List<DateTime> LapTime { get; set; }
+        public DateTime StartTime { get; }
+        public DateTime StopTime { get; }
+        public List<DateTime> LapTime { get; }
+        public string From { get; }
+        public System.Timers.Timer Timer { get; }
+
+        public DateTime Start(string from, string moreInfo = "");
+        public TimeSpan? GetTimerTotal();
+        public TimeSpan? Lap(string moreInfo = "");
+        public DateTime? Stop(string moreInfo = "");
+    }
+
+    public class TimeService : ITimeService
+    {
+        public DateTime StartTime { get; private set; }
+        public DateTime StopTime { get; private set; }
+        public List<DateTime> LapTime { get; private set; }
         public string From { get; private set; }
         public System.Timers.Timer Timer { get; private set; }
 
-        private readonly ILogger<Controller>? _logger;
+        private readonly ILogger<TimeService> _logger;
 
-        public TimeController(string from, ILogger<Controller>? logger = null)
+        public TimeService(ILogger<TimeService> logger)
         {
             _logger = logger;
+            From = String.Empty;
             StartTime = new DateTime();
             StopTime = new DateTime();
             LapTime = new List<DateTime>();
             Timer = new System.Timers.Timer();
-            From = from;
         }
 
         //Start
-        public DateTime Start(string moreInfo = "")
+        public DateTime Start(string from, string moreInfo = "")
         {
+            From = from;
             LapTime = new List<DateTime>();
             Timer.Start();
             StartTime = DateTime.Now;
 
-            ConsoleController.ShowTimeLog(EnumsModel.TimerLog.Start, this, moreInfo);
+            _logger.LogInformation("Start time on {From} : {StartTime} | {MoreInfo}", From, StartTime, moreInfo);
             return StartTime;
         }
 
@@ -59,7 +71,7 @@ namespace LivesteamScrapper.Controllers
             {
                 DateTime now = DateTime.Now;
                 LapTime.Add(now);
-                ConsoleController.ShowTimeLog(EnumsModel.TimerLog.Lap, this, moreInfo);
+                _logger.LogInformation("Lap count on {From} : {LapTime} | {MoreInfo}", From, LapTime, moreInfo);
                 return (now - StartTime);
             }
         }
@@ -75,7 +87,7 @@ namespace LivesteamScrapper.Controllers
             {
                 StopTime = DateTime.Now;
                 Timer.Stop();
-                ConsoleController.ShowTimeLog(EnumsModel.TimerLog.Stop, this, moreInfo);
+                _logger.LogInformation("Stop time on {From} : {StopTime} | {MoreInfo}", From, StopTime, moreInfo);
                 return StopTime;
             }
         }

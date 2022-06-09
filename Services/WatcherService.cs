@@ -1,22 +1,38 @@
 ﻿using LivesteamScrapper.Models;
-using Microsoft.AspNetCore.Mvc;
 using static LivesteamScrapper.Models.EnumsModel;
 
-namespace LivesteamScrapper.Controllers
+namespace LivesteamScrapper.Services
 {
-    public class WatcherController : Controller
+    public interface IWatcherService
+    {
+        bool AddStream(string website, string channelPath);
+        ScrapperStatus GetUpdatedStatus(string website, string channelPath);
+        bool RemoveStream(string website, string channelPath);
+        void SaveCurrentStreams();
+        void StartAllStreamScrapper();
+        Task<bool> StartStreamScrapperAsync(string website, string channelPath);
+        void StopAllStreamScrapper();
+        Task<bool> StopStreamScrapperAsync(string website, string channelPath);
+        Task StreamingWatcherAsync(List<string> streams, ScrapperMode mode, CancellationToken token);
+    }
+
+    public class WatcherService : IWatcherService
     {
         private readonly List<Stream> listStreams;
 
-        private readonly CancellationToken ct;
-        private readonly ILogger<Controller>? _logger;
-        private readonly ScrapperMode scrapperMode;
+        private CancellationToken ct;
+        private ScrapperMode scrapperMode;
+        private readonly ILogger<WatcherService> _logger;
+        private readonly IServiceProvider _provider;
+        private readonly IFileService _file;
 
-        public WatcherController(ScrapperMode mode, CancellationToken token, ILogger<Controller>? logger = null)
+        public WatcherService(IServiceProvider provider, ILogger<WatcherService> logger, IFileService file)
         {
             _logger = logger;
-            ct = token;
-            scrapperMode = mode;
+            _provider = provider;
+            _file = file;
+            ct = new();
+            scrapperMode = new();
             listStreams = new();
         }
 
@@ -28,8 +44,7 @@ namespace LivesteamScrapper.Controllers
                 if (index < 0)
                 {
                     EnvironmentModel environment = EnvironmentModel.GetEnvironment(website);
-                    ScrapperController scrapperController = new(environment, channelPath, _logger);
-                    Stream stream = new(website, channelPath, environment, scrapperController);
+                    Stream stream = new(website, channelPath, environment, _provider);
                     stream.Status = ScrapperStatus.Running;
                     listStreams.Add(stream);
                     _ = Task.Run(() => StartStreamScrapperAsync(website, channelPath));
@@ -42,7 +57,7 @@ namespace LivesteamScrapper.Controllers
             }
             catch (Exception e)
             {
-                ConsoleController.ShowExceptionLog("AddStream", e.Message);
+                _logger.LogError("AddStream", e);
                 return false;
             }
         }
@@ -59,14 +74,15 @@ namespace LivesteamScrapper.Controllers
                 else
                 {
                     listStreams[index].Status = ScrapperStatus.Stopped;
-                    listStreams[index].Scrapper.Dispose();
+                    listStreams[index].Scrapper.Stop();
+                    listStreams[index].Dispose();
                     listStreams.RemoveAt(index);
                     return true;
                 }
             }
             catch (Exception e)
             {
-                ConsoleController.ShowExceptionLog("RemoveStream", e.Message);
+                _logger.LogError("RemoveStream", e);
                 return false;
             }
 
@@ -99,6 +115,7 @@ namespace LivesteamScrapper.Controllers
                 {
                     listStreams[index].Status = ScrapperStatus.Running;
 
+
                     if (!listStreams[index].Scrapper.IsScrapping)
                     {
                         switch (scrapperMode)
@@ -106,7 +123,7 @@ namespace LivesteamScrapper.Controllers
                             case ScrapperMode.Off:
                                 break;
                             case ScrapperMode.Viewers:
-                                result = await listStreams[index].Scrapper.RunViewerScrapperAsync();
+                                result = await listStreams[index].Scrapper.RunViewerScrapperAsync(listStreams[index].Environment, listStreams[index].Channel);
                                 break;
                             case ScrapperMode.Chat:
                                 break;
@@ -132,7 +149,7 @@ namespace LivesteamScrapper.Controllers
             }
             catch (Exception e)
             {
-                ConsoleController.ShowExceptionLog("StartStreamScrapperAsync", e.Message);
+                _logger.LogError("StartStreamScrapperAsync", e);
                 return false;
             }
         }
@@ -158,7 +175,7 @@ namespace LivesteamScrapper.Controllers
             }
             catch (Exception e)
             {
-                ConsoleController.ShowExceptionLog("StopStreamScrapperAsync", e.Message);
+                _logger.LogError("StopStreamScrapperAsync", e);
                 return false;
             }
         }
@@ -183,7 +200,7 @@ namespace LivesteamScrapper.Controllers
             }
             catch (Exception e)
             {
-                ConsoleController.ShowExceptionLog("StartAllStreamScrapper", e.Message);
+                _logger.LogError("StartAllStreamScrapper", e);
             }
         }
 
@@ -203,7 +220,7 @@ namespace LivesteamScrapper.Controllers
             }
             catch (Exception e)
             {
-                ConsoleController.ShowExceptionLog("StopAllStreamScrapper", e.Message);
+                _logger.LogError("StopAllStreamScrapper", e);
             }
         }
 
@@ -227,14 +244,18 @@ namespace LivesteamScrapper.Controllers
             {
                 lines.Add($"{stream.Website},{stream.Channel}");
             }
-            FileController.WriteCsv("files/config", "streams.txt", lines, true);
+
+            _file.WriteCsv("files/config", "streams.txt", lines, true);
         }
 
-        public async Task StreamingWatcherAsync(List<string> streams)
+        public async Task StreamingWatcherAsync(List<string> streams, ScrapperMode mode, CancellationToken token)
         {
+            scrapperMode = mode;
+            ct = token;
+
             //Load streams with string of "website,channel"
-            await Task.Run(() => AddStreamEntries(streams));
-            await Task.Delay(5000);
+            await Task.Run(() => AddStreamEntries(streams), CancellationToken.None);
+            await Task.Delay(5000, CancellationToken.None);
 
             //Setup Debugger
             Dictionary<string, List<string>> debugData = new();
@@ -253,9 +274,9 @@ namespace LivesteamScrapper.Controllers
                         List<Task> debugTasks = new();
 
                         //Debug create new time
-                        if(debugCounter <= 0)
+                        if (debugCounter <= 0)
                         {
-                            await Task.Run(() => debugData["Times"].Add($"{DateTime.Now:dd/MM/yyyy HH:mm:ss}"));
+                            await Task.Run(() => debugData["Times"].Add($"{DateTime.Now:dd/MM/yyyy HH:mm:ss}"), CancellationToken.None);
                         }
 
                         foreach (var stream in streamsCopy)
@@ -285,7 +306,7 @@ namespace LivesteamScrapper.Controllers
                                         debugData[$"{stream.Website},{stream.Channel}"].Add("");
                                     }
                                     debugData[$"{stream.Website},{stream.Channel}"].Add(stream.Status.ToString());
-                                }));
+                                }, CancellationToken.None));
                             }
                         }
 
@@ -309,13 +330,13 @@ namespace LivesteamScrapper.Controllers
                                             lines.Add($"{item},{string.Join(",", debugCopy[item])}");
                                         }
                                     }
-                                    FileController.WriteCsv("files/debug", "status.csv", lines, true);
+                                    _file.WriteCsv("files/debug", "status.csv", lines, true);
                                 }
-                            catch (Exception e)
-                            {
-                                ConsoleController.ShowExceptionLog("StreamingWatcherAsync->Debug", e.Message);
-                            }
-                        });
+                                catch (Exception e)
+                                {
+                                    _logger.LogError("StreamingWatcherAsync->Debug", e);
+                                }
+                            }, CancellationToken.None);
                             debugCounter = 10;
                         }
 
@@ -330,7 +351,7 @@ namespace LivesteamScrapper.Controllers
                 }
                 catch (Exception e)
                 {
-                    ConsoleController.ShowExceptionLog("StreamingWatcherAsync", e.Message);
+                    _logger.LogError("StreamingWatcherAsync", e);
                 }
             }
 
@@ -338,27 +359,39 @@ namespace LivesteamScrapper.Controllers
             SaveCurrentStreams();
 
             //Finish task
-            await Task.Run(() => StopAllStreamScrapper());
+            await Task.Run(() => StopAllStreamScrapper(), CancellationToken.None);
         }
     }
 
-    internal class Stream
+    sealed class Stream : IDisposable
     {
         public string Website { get; set; }
         public string Channel { get; set; }
         public EnvironmentModel Environment { get; set; }
-        public ScrapperController Scrapper { get; set; }
+        private readonly IServiceScope _scope;
+        public IScrapperService Scrapper 
+        {
+            get
+            {
+                return (IScrapperService)_scope.ServiceProvider.GetRequiredService(typeof(IScrapperService));
+            }
+        }
         public ScrapperStatus Status { get; set; }
         public DateTime WaitTime { get; set; }
 
-        public Stream(string website, string channel, EnvironmentModel environment, ScrapperController scrapper)
+        public Stream(string website, string channel, EnvironmentModel environment, IServiceProvider provider)
         {
             Website = website;
             Channel = channel;
             Environment = environment;
-            Scrapper = scrapper;
+            _scope = provider.CreateScope();
             Status = ScrapperStatus.Stopped;
             WaitTime = new DateTime();
+        }
+
+        public void Dispose()
+        {
+            _scope.Dispose();
         }
     }
 }

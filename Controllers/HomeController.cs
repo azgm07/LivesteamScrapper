@@ -14,12 +14,14 @@ namespace LivesteamScrapper.Controllers
         }
 
         public IActionResult Index()
-        {            
+        {
+            _logger.LogInformation("Home page loaded");
             return View();
         }
 
         public IActionResult Privacy()
         {
+            _logger.LogInformation("Privacy page loaded");
             return View();
         }
 

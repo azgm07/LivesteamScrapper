@@ -1,10 +1,23 @@
 using LivesteamScrapper.Controllers;
 using LivesteamScrapper.Models;
+using LivesteamScrapper.Services;
+using Microsoft.AspNetCore.Mvc;
+
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
 
 // Add services to the container.
+builder.Services.AddRazorPages();
 builder.Services.AddControllersWithViews();
+
+// Add services
+builder.Services.AddScoped<IBrowserService, BrowserService>();
+builder.Services.AddSingleton<IFileService, FileService>();
+builder.Services.AddScoped<IScrapperService, ScrapperService>();
+builder.Services.AddScoped<ITimeService, TimeService>();
+builder.Services.AddSingleton<IWatcherService, WatcherService>();
 
 var app = builder.Build();
 
@@ -28,15 +41,22 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 //Execution
+var logger = app.Services.GetRequiredService<ILogger<Controller>>();
 CancellationTokenSource cts = new();
-WatcherController watcherController = new(EnumsModel.ScrapperMode.Viewers, cts.Token);
-List<string> lines = FileController.ReadCsv("files/config", "streams.txt");
 
-if (!lines.Any())
+var file = app.Services.GetService<IFileService>();
+var watcher = app.Services.GetService<IWatcherService>();
+
+if(file != null && watcher != null)
 {
-    ConsoleController.ShowWarningLog("Program", "Config file is empty, waiting for entries on web browser.");
+    List<string> lines = file.ReadCsv("files/config", "streams.txt");
+
+    if (!lines.Any())
+    {
+        logger.LogWarning("Config file is empty, waiting for entries on web browser.");
+    }
+    _ = Task.Run(() => watcher.StreamingWatcherAsync(lines, EnumsModel.ScrapperMode.Viewers, cts.Token));
 }
-_ = Task.Run(() => watcherController.StreamingWatcherAsync(lines));
 
 //Test Task
 //tasks.Add(Task.Run(async () =>

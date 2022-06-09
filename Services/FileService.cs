@@ -1,18 +1,21 @@
-﻿using Microsoft.AspNetCore.Mvc;
-
-namespace LivesteamScrapper.Controllers
+﻿namespace LivesteamScrapper.Services
 {
-    public class FileController : Controller
+    public interface IFileService
     {
-        private readonly ILogger<Controller> _logger;
+        public void WriteCsv(string folder, string file, List<string> lines, bool erase = false);
+        public List<string> ReadCsv(string folder, string file);
+    }
+    public class FileService : IFileService
+    {
+        private readonly ILogger<FileService> _logger;
 
-        public FileController(ILogger<Controller> logger)
+        public FileService(ILogger<FileService> logger)
         {
             _logger = logger;
         }
 
         //Write CSV lines with a list of strings
-        public static void WriteCsv(string folder, string file, List<string> lines, bool erase = false)
+        public void WriteCsv(string folder, string file, List<string> lines, bool erase = false)
         {
             string sCurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
             string sPath = System.IO.Path.Combine(sCurrentDirectory, folder);
@@ -36,9 +39,11 @@ namespace LivesteamScrapper.Controllers
             {
                 sw.WriteLine(line);
             }
+
+            _logger.LogInformation("File saved in {file}.", sFilePath);
         }
 
-        public static List<string> ReadCsv(string folder, string file)
+        public List<string> ReadCsv(string folder, string file)
         {
             string filePath = System.IO.Path.Combine(folder, file);
             string sCurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
