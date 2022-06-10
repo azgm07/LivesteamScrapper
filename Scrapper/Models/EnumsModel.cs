@@ -4,10 +4,8 @@ public class EnumsModel
 {
     public enum ScrapperMode
     {
-        Off,
-        Viewers,
-        Chat,
-        All
+        Delayed,
+        Precise
     }
 
     public enum ScrapperStatus

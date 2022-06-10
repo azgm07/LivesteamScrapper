@@ -14,7 +14,7 @@ builder.Services.AddControllersWithViews();
 // Add services
 builder.Services.AddScoped<IBrowserService, BrowserService>();
 builder.Services.AddSingleton<IFileService, FileService>();
-builder.Services.AddScoped<IScrapperService, ScrapperService>();
+builder.Services.AddScoped<IScrapperInfoService, ScrapperInfoService>();
 builder.Services.AddScoped<ITimeService, TimeService>();
 builder.Services.AddSingleton<IWatcherService, WatcherService>();
 
@@ -46,7 +46,7 @@ CancellationTokenSource cts = new();
 var file = app.Services.GetService<IFileService>();
 var watcher = app.Services.GetService<IWatcherService>();
 
-if(file != null && watcher != null)
+if (file != null && watcher != null)
 {
     List<string> lines = file.ReadCsv("files/config", "streams.txt");
 
@@ -54,7 +54,7 @@ if(file != null && watcher != null)
     {
         logger.LogWarning("Config file is empty, waiting for entries on web browser.");
     }
-    _ = Task.Run(() => watcher.StreamingWatcherAsync(lines, EnumsModel.ScrapperMode.Viewers, cts.Token));
+    _ = Task.Run(() => watcher.StreamingWatcherAsync(lines, EnumsModel.ScrapperMode.Delayed, cts.Token));
 }
 
 app.Run();

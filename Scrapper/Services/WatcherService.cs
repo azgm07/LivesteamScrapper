@@ -8,37 +8,46 @@ public interface IWatcherService
     bool AddStream(string website, string channelPath);
     ScrapperStatus GetUpdatedStatus(string website, string channelPath);
     bool RemoveStream(string website, string channelPath);
-    void SaveCurrentStreams();
     void StartAllStreamScrapper();
     Task<bool> StartStreamScrapperAsync(string website, string channelPath);
     void StopAllStreamScrapper();
     Task<bool> StopStreamScrapperAsync(string website, string channelPath);
     Task StreamingWatcherAsync(List<string> streams, ScrapperMode mode, CancellationToken token);
     public List<Stream> ListStreams { get; }
+    public int SecondsToWait { get; set; }
 }
 
 public class WatcherService : IWatcherService
 {
     public List<Stream> ListStreams { get; private set; }
+    public int SecondsToWait { get; set; }
 
     private CancellationToken ct;
     private ScrapperMode scrapperMode;
     private readonly ILogger<WatcherService> _logger;
     private readonly IServiceProvider _provider;
     private readonly IFileService _file;
+    private bool isReady;
 
-    public WatcherService(IServiceProvider provider, ILogger<WatcherService> logger, IFileService file)
+    public WatcherService(IServiceProvider provider, ILogger<WatcherService> logger, IFileService file, int secondsToWait = 600)
     {
         _logger = logger;
         _provider = provider;
         _file = file;
         ct = new();
-        scrapperMode = new();
+        scrapperMode = ScrapperMode.Delayed;
         ListStreams = new();
+        SecondsToWait = secondsToWait;
+        isReady = false;
     }
 
     public bool AddStream(string website, string channelPath)
     {
+        if (!isReady)
+        {
+            return false;
+        }
+
         try
         {
             int index = ListStreams.FindIndex(stream => stream.Website == website && stream.Channel == channelPath);
@@ -61,10 +70,16 @@ public class WatcherService : IWatcherService
             _logger.LogError("AddStream", e);
             return false;
         }
+
     }
 
     public bool RemoveStream(string website, string channelPath)
     {
+        if (!isReady)
+        {
+            return false;
+        }
+
         try
         {
             int index = ListStreams.FindIndex(stream => stream.Website == website && stream.Channel == channelPath);
@@ -91,6 +106,11 @@ public class WatcherService : IWatcherService
 
     public ScrapperStatus GetUpdatedStatus(string website, string channelPath)
     {
+        if (!isReady)
+        {
+            return ScrapperStatus.NotFound;
+        }
+
         int index = ListStreams.FindIndex(stream => stream.Website == website && stream.Channel == channelPath);
         if (index < 0)
         {
@@ -104,6 +124,11 @@ public class WatcherService : IWatcherService
 
     public async Task<bool> StartStreamScrapperAsync(string website, string channelPath)
     {
+        if (!isReady)
+        {
+            return false;
+        }
+
         try
         {
             bool result = false;
@@ -119,22 +144,8 @@ public class WatcherService : IWatcherService
 
                 if (!ListStreams[index].Scrapper.IsScrapping)
                 {
-                    switch (scrapperMode)
-                    {
-                        case ScrapperMode.Off:
-                            break;
-                        case ScrapperMode.Viewers:
-                            result = await ListStreams[index].Scrapper.RunViewerScrapperAsync(ListStreams[index].Environment, ListStreams[index].Channel);
-                            break;
-                        case ScrapperMode.Chat:
-                            break;
-                        case ScrapperMode.All:
-                            break;
-                        default:
-                            break;
-                    }
+                    result = await ListStreams[index].Scrapper.RunScrapperAsync(ListStreams[index].Environment, ListStreams[index].Channel, scrapperMode);
                 }
-
                 if (result)
                 {
                     ListStreams[index].Status = ScrapperStatus.Running;
@@ -157,6 +168,11 @@ public class WatcherService : IWatcherService
 
     public async Task<bool> StopStreamScrapperAsync(string website, string channelPath)
     {
+        if (!isReady)
+        {
+            return false;
+        }
+
         try
         {
             int index = ListStreams.FindIndex(stream => stream.Website == website && stream.Channel == channelPath);
@@ -183,6 +199,11 @@ public class WatcherService : IWatcherService
 
     public void StartAllStreamScrapper()
     {
+        if (!isReady)
+        {
+            return;
+        }
+
         try
         {
             List<Action> actions = new();
@@ -207,6 +228,11 @@ public class WatcherService : IWatcherService
 
     public void StopAllStreamScrapper()
     {
+        if (!isReady)
+        {
+            return;
+        }
+
         try
         {
             List<Action> actions = new();
@@ -238,7 +264,7 @@ public class WatcherService : IWatcherService
         }
     }
 
-    public void SaveCurrentStreams()
+    private void SaveCurrentStreams()
     {
         List<string> lines = new();
         foreach (var stream in ListStreams)
@@ -253,6 +279,7 @@ public class WatcherService : IWatcherService
     {
         scrapperMode = mode;
         ct = token;
+        isReady = true;
 
         //Load streams with string of "website,channel"
         await Task.Run(() => AddStreamEntries(streams), CancellationToken.None);
@@ -286,7 +313,7 @@ public class WatcherService : IWatcherService
                         if (stream.Status == ScrapperStatus.Waiting)
                         {
                             TimeSpan timeSpan = DateTime.Now - stream.WaitTime;
-                            if (timeSpan.TotalSeconds >= 600)
+                            if (timeSpan.TotalSeconds >= SecondsToWait)
                             {
                                 _ = Task.Run(() => StartStreamScrapperAsync(stream.Website, stream.Channel));
                             }
@@ -356,6 +383,8 @@ public class WatcherService : IWatcherService
             }
         }
 
+        isReady = false;
+        
         //Salve current streams
         SaveCurrentStreams();
 
@@ -370,11 +399,11 @@ public sealed class Stream : IDisposable
     public string Channel { get; set; }
     public EnvironmentModel Environment { get; set; }
     private readonly IServiceScope _scope;
-    public IScrapperService Scrapper
+    public IScrapperInfoService Scrapper
     {
         get
         {
-            return (IScrapperService)_scope.ServiceProvider.GetRequiredService(typeof(IScrapperService));
+            return (IScrapperInfoService)_scope.ServiceProvider.GetRequiredService(typeof(IScrapperInfoService));
         }
     }
     public ScrapperStatus Status { get; set; }

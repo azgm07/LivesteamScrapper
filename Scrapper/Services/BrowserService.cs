@@ -179,6 +179,10 @@ public sealed class BrowserService : IBrowserService
                 {
                     WaitUntilElementExists(waitSelector);
                 }
+                else
+                {
+                    Thread.Sleep(1000);
+                }
                 IsReady = true;
             }
         }
@@ -194,6 +198,7 @@ public sealed class BrowserService : IBrowserService
         if (Browser != null)
         {
             Browser.Dispose();
+            Browser = null;
         }
     }
 }

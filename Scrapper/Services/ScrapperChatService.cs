@@ -8,7 +8,7 @@ using static Scrapper.Models.EnumsModel;
 
 namespace Scrapper.Services;
 
-public interface IScrapperService
+public interface IScrapperChatService
 {
     CancellationTokenSource Cts { get; }
     string CurrentGame { get; }
@@ -38,9 +38,9 @@ public interface IScrapperService
     void WriteData(List<string> lines, string website, string livestream, string type, bool startNew = false);
 }
 
-public class ScrapperService : IScrapperService
+public class ScrapperChatService : IScrapperChatService
 {
-    private readonly ILogger<ScrapperService> _logger;
+    private readonly ILogger<ScrapperChatService> _logger;
 
     public bool IsScrapping { get; private set; }
     public EnvironmentModel Environment { get; private set; }
@@ -70,7 +70,7 @@ public class ScrapperService : IScrapperService
     public string LastMessage { get; private set; }
 
     //Constructor
-    public ScrapperService(ILogger<ScrapperService> logger, IBrowserService browser, IBrowserService browserChat, ITimeService time, IFileService file)
+    public ScrapperChatService(ILogger<ScrapperChatService> logger, IBrowserService browser, IBrowserService browserChat, ITimeService time, IFileService file)
     {
         _logger = logger;
         Environment = new();
@@ -90,7 +90,6 @@ public class ScrapperService : IScrapperService
         chatTimeout = 600000;
         timeoutRestart = 0;
         IsScrapping = false;
-        Mode = ScrapperMode.Off;
         MaxFails = 10;
         mainTasks = new();
     }
@@ -201,7 +200,6 @@ public class ScrapperService : IScrapperService
         bool hasStarted = await Task.Run(() => Start());
         if (hasStarted)
         {
-            Mode = ScrapperMode.All;
             StartTimerTasksCancellation(minutes);
 
             List<Task> tasks = new();
@@ -240,7 +238,6 @@ public class ScrapperService : IScrapperService
 
             if (hasStarted)
             {
-                Mode = ScrapperMode.Viewers;
                 List<Task> tasks = new();
                 tasks.Add(RunViewerGameScrapperAsync(Cts.Token));
 
@@ -290,7 +287,6 @@ public class ScrapperService : IScrapperService
     {
         Cts.Cancel();
         IsScrapping = false;
-        Mode = ScrapperMode.Off;
 
         if (_browser != null)
         {
@@ -804,20 +800,17 @@ public class ScrapperService : IScrapperService
                 }
                 break;
             case "youtube":
-                if (Mode == ScrapperMode.All || Mode == ScrapperMode.Chat)
+                //Open chat in aux browser page
+                if (_browserChat.Browser == null)
                 {
-                    //Open chat in aux browser page
-                    if (_browserChat.Browser == null)
-                    {
-                        _browserChat.StartBrowser(false);
-                    }
-                    else
-                    {
-                        _browserChat.ReloadBrowserPage();
-                    }
-                    url = Environment.Http + "live_chat?is_popout=1&v=" + Livestream.Split("=")[1];
-                    _browserChat.OpenBrowserPage(url, null);
+                    _browserChat.StartBrowser(false);
                 }
+                else
+                {
+                    _browserChat.ReloadBrowserPage();
+                }
+                url = Environment.Http + "live_chat?is_popout=1&v=" + Livestream.Split("=")[1];
+                _browserChat.OpenBrowserPage(url, null);
 
                 //Change the name to channel name
                 if (_browser.Browser != null)
@@ -834,16 +827,13 @@ public class ScrapperService : IScrapperService
                 }
                 break;
             case "twitch":
-                if (Mode == ScrapperMode.All || Mode == ScrapperMode.Chat)
+                //Open chat in aux browser page
+                if (_browserChat.Browser == null)
                 {
-                    //Open chat in aux browser page
-                    if (_browserChat.Browser == null)
-                    {
-                        _browserChat.StartBrowser(false);
-                    }
-                    url = Environment.Http + "popout/" + Livestream + "/chat?popout=";
-                    _browserChat.OpenBrowserPage(url, null);
+                    _browserChat.StartBrowser(false);
                 }
+                url = Environment.Http + "popout/" + Livestream + "/chat?popout=";
+                _browserChat.OpenBrowserPage(url, null);
                 break;
             default:
                 break;

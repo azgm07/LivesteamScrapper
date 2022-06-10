@@ -29,7 +29,7 @@ namespace ScrapperUnitTests
             // Add services
             builder.Services.AddScoped<IBrowserService, BrowserService>();
             builder.Services.AddSingleton<IFileService, FileService>();
-            builder.Services.AddScoped<IScrapperService, ScrapperService>();
+            builder.Services.AddScoped<IScrapperInfoService, ScrapperInfoService>();
             builder.Services.AddScoped<ITimeService, TimeService>();
             builder.Services.AddSingleton<IWatcherService, WatcherService>();
 
@@ -65,7 +65,7 @@ namespace ScrapperUnitTests
             // Add services
             builder.Services.AddScoped<IBrowserService, BrowserService>();
             builder.Services.AddSingleton<IFileService, FileService>();
-            builder.Services.AddScoped<IScrapperService, ScrapperService>();
+            builder.Services.AddScoped<IScrapperInfoService, ScrapperInfoService>();
             builder.Services.AddScoped<ITimeService, TimeService>();
             builder.Services.AddSingleton<IWatcherService, WatcherService>();
 
