@@ -100,20 +100,13 @@ public class ScrapperInfoService : IScrapperInfoService
 
             if (_browser.IsReady && _browser.Browser != null)
             {
-                try
-                {
-                    PrepareScrapperPage();
-                    _logger.LogInformation("Browser page is ready for {website}/{livestream}", Website, Livestream);
-                    IsScrapping = true;
-                }
-                catch (Exception e)
-                {
-                    IsScrapping = false;
-                    _logger.LogError(e, "OpenScrapper");
-                }
+                PrepareScrapperPage();
+                _logger.LogInformation("Browser page is ready for {website}/{livestream}", Website, Livestream);
+                IsScrapping = true;
             }
             else
             {
+                _logger.LogInformation("Browser page is not ready for {website}/{livestream}", Website, Livestream);
                 IsScrapping = false;
             }
             return IsScrapping;
@@ -121,7 +114,6 @@ public class ScrapperInfoService : IScrapperInfoService
         catch (Exception e)
         {
             _logger.LogError(e, "OpenScrapper");
-            _logger.LogInformation("Browser page is not ready for {website}/{livestream}", Website, Livestream);
             IsScrapping = false;
             return IsScrapping;
         }
@@ -182,7 +174,7 @@ public class ScrapperInfoService : IScrapperInfoService
     public async Task RunTestAsync(EnvironmentModel environment, string livestream, int minutes)
     {
         Environment = environment;
-        Website = ServiceUtils.GetUntilSpecial(Environment.Website);
+        Website = Environment.Website;
         Livestream = livestream;
         bool hasStarted = await Task.Run(() => Start());
         if (hasStarted)
@@ -210,7 +202,7 @@ public class ScrapperInfoService : IScrapperInfoService
         {
             Mode = mode;
             Environment = environment;
-            Website = ServiceUtils.GetUntilSpecial(Environment.Website);
+            Website = Environment.Website;
             Livestream = livestream;
 
             bool hasStarted = await Task.Run(() => Start());
@@ -407,7 +399,6 @@ public class ScrapperInfoService : IScrapperInfoService
             if (failedAtempts >= MaxFails)
             {
                 _logger.LogInformation("Scrapper failed and has to stop for {website}/{livestream}", Website, Livestream);
-                Stop();
                 break;
             }
 
@@ -466,8 +457,10 @@ public class ScrapperInfoService : IScrapperInfoService
             }
         }
 
+        await Task.Run(() => Stop(), CancellationToken.None);
+
         //Stop timers
-        _time.Stop();
+        await Task.Run(() => _time.Stop(), CancellationToken.None);
 
         //Send to file the rest of counter lines
         if (listCounter.Count > 0)
@@ -622,8 +615,7 @@ public class ScrapperInfoService : IScrapperInfoService
 
     private void WriteData(List<string> lines, string website, string livestream, string type, bool startNew = false)
     {
-        string file = $"{ServiceUtils.GetUntilSpecial(website.ToLower())}-{ServiceUtils.GetUntilSpecial(livestream.ToLower())}-{type}.csv";
-
+        string file = $"{ServiceUtils.RemoveSpecial(website.ToLower())}-{ServiceUtils.RemoveSpecial(livestream.ToLower())}-{type}.csv";
         _file.WriteCsv("files/csv", file, lines, startNew);
     }
 
@@ -634,26 +626,37 @@ public class ScrapperInfoService : IScrapperInfoService
         {
             case "facebook":
                 timeoutRestart = 10000;
-
-                if (_browser.Browser != null)
+                try
                 {
-                    _browser.WaitUntilElementClickable(LiveElementsModel.GetElements(Environment.Website).OpenLive).Click();
+                    if (_browser.Browser != null)
+                    {
+                        _browser.WaitUntilElementClickable(LiveElementsModel.GetElements(Environment.Website).OpenLive).Click();
+                    }
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "PrepareScrapperPage");
+                    throw;
                 }
                 break;
             case "youtube":
-                //Change the name to channel name
-                if (_browser.Browser != null)
-                {
-                    try
-                    {
-                        string name = _browser.Browser.FindElements(LiveElementsModel.GetElements(Environment.Website).ChannelName)[0].Text;
-                        Livestream = name;
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogError(e, "PrepareScrapperPage");
-                    }
-                }
+                ////Change the name to channel name
+                //if (_browser.Browser != null)
+                //{
+                //    try
+                //    {
+                //        string name = _browser.Browser.FindElements(LiveElementsModel.GetElements(Environment.Website).ChannelName)[0].Text;
+                //        if (!string.IsNullOrEmpty(name.Trim()))
+                //        {
+                //            Livestream = name;
+                //        }
+                //    }
+                //    catch (Exception e)
+                //    {
+                //        _logger.LogError(e, "PrepareScrapperPage");
+                //        throw;
+                //    }
+                //}
                 break;
             case "twitch":
                 break;

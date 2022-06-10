@@ -29,7 +29,7 @@ public class WatcherService : IWatcherService
     private readonly IFileService _file;
     private bool isReady;
 
-    public WatcherService(IServiceProvider provider, ILogger<WatcherService> logger, IFileService file, int secondsToWait = 60)
+    public WatcherService(IServiceProvider provider, ILogger<WatcherService> logger, IFileService file, int secondsToWait = 300)
     {
         _logger = logger;
         _provider = provider;
@@ -260,7 +260,7 @@ public class WatcherService : IWatcherService
             {
                 AddStream(str[0], str[1]);
             }
-            Thread.Sleep(100);
+            Thread.Sleep(1000);
         }
     }
 
@@ -288,7 +288,15 @@ public class WatcherService : IWatcherService
         //Setup Debugger
         Dictionary<string, List<string>> debugData = new();
         debugData.Add($"Times", new List<string>());
-        int debugCounter = 10;
+
+        bool flush = false;
+
+        using System.Timers.Timer timer = new(60000);
+        timer.Elapsed += (sender, e) => flush = true;
+        timer.AutoReset = true;
+        timer.Start();
+
+        int watcherDelay = 60000;
 
         //Check and update
         while (!ct.IsCancellationRequested)
@@ -302,9 +310,9 @@ public class WatcherService : IWatcherService
                     List<Task> debugTasks = new();
 
                     //Debug create new time
-                    if (debugCounter <= 0)
+                    if (flush)
                     {
-                        await Task.Run(() => debugData["Times"].Add($"{DateTime.Now:dd/MM/yyyy HH:mm:ss}"), CancellationToken.None);
+                        await Task.Run(() => debugData["Times"].Add($"{DateTime.Now:dd/MM/yyyy HH:mm:ss}"), CancellationToken.None);                        
                     }
 
                     foreach (var stream in streamsCopy)
@@ -316,12 +324,18 @@ public class WatcherService : IWatcherService
                             if (timeSpan.TotalSeconds >= SecondsToWait)
                             {
                                 _ = Task.Run(() => StartStreamScrapperAsync(stream.Website, stream.Channel));
+                                await Task.Delay(1000, CancellationToken.None);
                             }
+                        }
+                        else if (stream.Status == ScrapperStatus.Running && !stream.Scrapper.IsScrapping)
+                        {
+                            stream.Status = ScrapperStatus.Waiting;
+                            stream.WaitTime = DateTime.Now;
                         }
 
                         //Debug add status
                         //Debug create new time
-                        if (debugCounter <= 0)
+                        if (flush)
                         {
                             debugTasks.Add(Task.Run(() =>
                             {
@@ -342,7 +356,7 @@ public class WatcherService : IWatcherService
 
                     //Debug flush out
                     //Debug create new time
-                    if (debugCounter <= 0)
+                    if (flush)
                     {
                         await Task.Run(() =>
                         {
@@ -365,16 +379,15 @@ public class WatcherService : IWatcherService
                                 _logger.LogError(e, "StreamingWatcherAsync->Debug");
                             }
                         }, CancellationToken.None);
-                        debugCounter = 10;
+                        flush = false;
                     }
 
-                    debugCounter--;
-                    int delay = 60000 - (int)(DateTime.Now - start).TotalMilliseconds;
+                    int delay = watcherDelay - (int)(DateTime.Now - start).TotalMilliseconds;
                     await Task.Delay(delay, ct);
                 }
                 else
                 {
-                    await Task.Delay(60000, ct);
+                    await Task.Delay(watcherDelay, ct);
                 }
             }
             catch (Exception e)
