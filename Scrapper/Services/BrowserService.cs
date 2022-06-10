@@ -69,14 +69,15 @@ public sealed class BrowserService : IBrowserService
         //Change options depending on the case
         if (isHeadless)
         {
-            options.AddArguments(new List<string>() { "headless", "disable-gpu", "no-sandbox", "disable-extensions",
+            options.AddArguments(new List<string>() { "headless", "disable-gpu", "no-sandbox", "silent-launch", "no-startup-window", "disable-extensions",
                 "disable-application-cache", "disable-notifications", "disable-infobars", "log-level=3", "mute-audio" });
         }
         else
         {
-            options.AddArguments(new List<string>() { /*"headless",*/ "disable-gpu", "no-sandbox", "disable-extensions",
+            options.AddArguments(new List<string>() { /*"headless",*/ "disable-gpu", "no-sandbox", "silent-launch", "no-startup-window", "disable-extensions",
                 "disable-application-cache", "disable-notifications", "disable-infobars", "log-level=3", "mute-audio" });
         }
+        
         options.AddUserProfilePreference("profile", new { default_content_setting_values = new { images = 2 } });
         options.AddUserProfilePreference("profile", new { default_content_setting_values = new { cookies = 2 } });
         options.AddUserProfilePreference("profile", new { default_content_setting_values = new { plugins = 2 } });
