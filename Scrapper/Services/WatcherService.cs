@@ -291,7 +291,7 @@ public class WatcherService : IWatcherService
 
         bool flush = false;
 
-        using System.Timers.Timer timer = new(60000);
+        using System.Timers.Timer timer = new(600000);
         timer.Elapsed += (sender, e) => flush = true;
         timer.AutoReset = true;
         timer.Start();

@@ -640,23 +640,6 @@ public class ScrapperInfoService : IScrapperInfoService
                 }
                 break;
             case "youtube":
-                ////Change the name to channel name
-                //if (_browser.Browser != null)
-                //{
-                //    try
-                //    {
-                //        string name = _browser.Browser.FindElements(LiveElementsModel.GetElements(Environment.Website).ChannelName)[0].Text;
-                //        if (!string.IsNullOrEmpty(name.Trim()))
-                //        {
-                //            Livestream = name;
-                //        }
-                //    }
-                //    catch (Exception e)
-                //    {
-                //        _logger.LogError(e, "PrepareScrapperPage");
-                //        throw;
-                //    }
-                //}
                 break;
             case "twitch":
                 break;
