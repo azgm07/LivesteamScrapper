@@ -77,28 +77,27 @@ public sealed class BrowserService : IBrowserService
             options.AddArguments(new List<string>() { /*"headless",*/ "disable-gpu", "no-sandbox", "silent-launch", "no-startup-window", "disable-extensions",
                 "disable-application-cache", "disable-notifications", "disable-infobars", "log-level=3", "mute-audio" });
         }
-        
-        options.AddUserProfilePreference("profile", new { default_content_setting_values = new { images = 2 } });
-        options.AddUserProfilePreference("profile", new { default_content_setting_values = new { cookies = 2 } });
-        options.AddUserProfilePreference("profile", new { default_content_setting_values = new { plugins = 2 } });
-        options.AddUserProfilePreference("profile", new { default_content_setting_values = new { popups = 2 } });
-        options.AddUserProfilePreference("profile", new { default_content_setting_values = new { geolocation = 2 } });
-        options.AddUserProfilePreference("profile", new { default_content_setting_values = new { notifications = 2 } });
-        options.AddUserProfilePreference("profile", new { default_content_setting_values = new { mixed_script = 2 } });
-        options.AddUserProfilePreference("profile", new { default_content_setting_values = new { media_stream = 2 } });
-        options.AddUserProfilePreference("profile", new { default_content_setting_values = new { media_stream_mic = 2 } });
-        options.AddUserProfilePreference("profile", new { default_content_setting_values = new { media_stream_camera = 2 } });
-        options.AddUserProfilePreference("profile", new { default_content_setting_values = new { protocol_handlers = 2 } });
-        options.AddUserProfilePreference("profile", new { default_content_setting_values = new { ppapi_broker = 2 } });
-        options.AddUserProfilePreference("profile", new { default_content_setting_values = new { automatic_downloads = 2 } });
-        options.AddUserProfilePreference("profile", new { default_content_setting_values = new { midi_sysex = 2 } });
-        options.AddUserProfilePreference("profile", new { default_content_setting_values = new { push_messaging = 2 } });
-        options.AddUserProfilePreference("profile", new { default_content_setting_values = new { ssl_cert_decisions = 2 } });
-        options.AddUserProfilePreference("profile", new { default_content_setting_values = new { metro_switch_to_desktop = 2 } });
-        options.AddUserProfilePreference("profile", new { default_content_setting_values = new { protected_media_identifier = 2 } });
-        options.AddUserProfilePreference("profile", new { default_content_setting_values = new { app_banner = 2 } });
-        options.AddUserProfilePreference("profile", new { default_content_setting_values = new { site_engagement = 2 } });
-        options.AddUserProfilePreference("profile", new { default_content_setting_values = new { durable_storage = 2 } });
+
+        options.AddUserProfilePreference("profile.default_content_setting_values.images", 2);
+        options.AddUserProfilePreference("profile.default_content_setting_values.cookies", 2);
+        options.AddUserProfilePreference("profile.default_content_setting_values.plugins", 2);
+        options.AddUserProfilePreference("profile.default_content_setting_values.popups", 2);
+        options.AddUserProfilePreference("profile.default_content_setting_values.geolocation", 2);
+        options.AddUserProfilePreference("profile.default_content_setting_values.notifications", 2);
+        options.AddUserProfilePreference("profile.default_content_setting_values.media_stream", 2);
+        options.AddUserProfilePreference("profile.default_content_setting_values.media_stream_mic", 2);
+        options.AddUserProfilePreference("profile.default_content_setting_values.media_stream_camera", 2);
+        options.AddUserProfilePreference("profile.default_content_setting_values.protocol_handlers", 2);
+        options.AddUserProfilePreference("profile.default_content_setting_values.ppapi_broker", 2);
+        options.AddUserProfilePreference("profile.default_content_setting_values.midi_sysex", 2);
+        options.AddUserProfilePreference("profile.default_content_setting_values.push_messaging", 2);
+        options.AddUserProfilePreference("profile.default_content_setting_values.ssl_cert_decisions", 2);
+        options.AddUserProfilePreference("profile.default_content_setting_values.metro_switch_to_desktop", 2);
+        options.AddUserProfilePreference("profile.default_content_setting_values.protected_media_identifier", 2);
+        options.AddUserProfilePreference("profile.default_content_setting_values.app_banner", 2);
+        options.AddUserProfilePreference("profile.default_content_setting_values.site_engagement", 2);
+        options.AddUserProfilePreference("profile.default_content_setting_values.durable_storage", 2);
+
         Browser = new ChromeDriver(options);
     }
 
