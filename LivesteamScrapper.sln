@@ -10,6 +10,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ScrapperUnitTests", "Scrapp
 		{12F7BF80-6428-40E8-A526-141A4D356D78} = {12F7BF80-6428-40E8-A526-141A4D356D78}
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScrapperBlazor", "ScrapperBlazor\ScrapperBlazor.csproj", "{72003330-1F4F-4B75-9D69-1C5F16FCA7B4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScrapperWin", "ScrapperWin\ScrapperWin.csproj", "{682B163D-90CE-4E2F-BD7B-3B34BE040B88}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,6 +28,14 @@ Global
 		{27859DAD-1263-491E-B6AA-6719BA19DD86}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{27859DAD-1263-491E-B6AA-6719BA19DD86}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{27859DAD-1263-491E-B6AA-6719BA19DD86}.Release|Any CPU.Build.0 = Release|Any CPU
+		{72003330-1F4F-4B75-9D69-1C5F16FCA7B4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{72003330-1F4F-4B75-9D69-1C5F16FCA7B4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{72003330-1F4F-4B75-9D69-1C5F16FCA7B4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{72003330-1F4F-4B75-9D69-1C5F16FCA7B4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{682B163D-90CE-4E2F-BD7B-3B34BE040B88}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{682B163D-90CE-4E2F-BD7B-3B34BE040B88}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{682B163D-90CE-4E2F-BD7B-3B34BE040B88}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{682B163D-90CE-4E2F-BD7B-3B34BE040B88}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
