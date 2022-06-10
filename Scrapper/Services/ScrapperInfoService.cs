@@ -72,6 +72,7 @@ public class ScrapperInfoService : IScrapperInfoService
         IsScrapping = false;
         MaxFails = 3;
         mainTasks = new();
+        DelayInSeconds = 300;
     }
 
     private void StartScrapperBrowser()
@@ -108,7 +109,7 @@ public class ScrapperInfoService : IScrapperInfoService
                 catch (Exception e)
                 {
                     IsScrapping = false;
-                    _logger.LogError("OpenScrapper", e);
+                    _logger.LogError(e, "OpenScrapper");
                 }
             }
             else
@@ -119,7 +120,7 @@ public class ScrapperInfoService : IScrapperInfoService
         }
         catch (Exception e)
         {
-            _logger.LogError("OpenScrapper", e);
+            _logger.LogError(e, "OpenScrapper");
             _logger.LogInformation("Browser page is not ready for {website}/{livestream}", Website, Livestream);
             IsScrapping = false;
             return IsScrapping;
@@ -152,7 +153,7 @@ public class ScrapperInfoService : IScrapperInfoService
         }
         catch (Exception e)
         {
-            _logger.LogError("ReloadScrapper", e);
+            _logger.LogError(e, "ReloadScrapper");
             _logger.LogInformation("Browser page is not ready for {website}/{livestream}", Website, Livestream);
             isReloading = false;
         }
@@ -213,14 +214,6 @@ public class ScrapperInfoService : IScrapperInfoService
             Livestream = livestream;
 
             bool hasStarted = await Task.Run(() => Start());
-            int count = 3;
-
-            while (!hasStarted && count > 0)
-            {
-                await Task.Delay(15000);
-                count--;
-                hasStarted = await Task.Run(() => Start());
-            }
 
             if (hasStarted)
             {
@@ -275,6 +268,7 @@ public class ScrapperInfoService : IScrapperInfoService
         else
         {
             _logger.LogInformation("Scrapper failed to start for {website}/{livestream}", Website, Livestream);
+            Stop();
         }
         return isOpen;
     }
@@ -360,7 +354,7 @@ public class ScrapperInfoService : IScrapperInfoService
         }
         catch (Exception e)
         {
-            _logger.LogError("ReadViewerCounter", e);
+            _logger.LogError(e, "ReadViewerCounter");
             return null;
         }
     }
@@ -384,7 +378,7 @@ public class ScrapperInfoService : IScrapperInfoService
         }
         catch (Exception e)
         {
-            _logger.LogError("ReadCurrentGame", e);
+            _logger.LogError(e, "ReadCurrentGame");
             return null;
         }
     }
@@ -396,8 +390,6 @@ public class ScrapperInfoService : IScrapperInfoService
 
         //Flush tasks
         List<Task> tasksFlush = new();
-
-        double waitMilliseconds = 60000;
 
         List<int> listCounter = new();
         string? currentGame = null;
@@ -455,9 +447,9 @@ public class ScrapperInfoService : IScrapperInfoService
             await taskHold;
 
             TimeSpan timeSpan = DateTime.Now - start;
-            if (timeSpan.TotalMilliseconds < waitMilliseconds)
+            if (timeSpan.TotalMilliseconds < (DelayInSeconds * 1000))
             {
-                await Task.Delay((int)(waitMilliseconds - timeSpan.TotalMilliseconds), CancellationToken.None);
+                await Task.Delay((int)((DelayInSeconds * 1000) - timeSpan.TotalMilliseconds), CancellationToken.None);
             }
 
             //Needs to reload the page
@@ -659,7 +651,7 @@ public class ScrapperInfoService : IScrapperInfoService
                     }
                     catch (Exception e)
                     {
-                        _logger.LogError("PrepareScrapperPage", e);
+                        _logger.LogError(e, "PrepareScrapperPage");
                     }
                 }
                 break;

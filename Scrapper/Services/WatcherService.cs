@@ -29,7 +29,7 @@ public class WatcherService : IWatcherService
     private readonly IFileService _file;
     private bool isReady;
 
-    public WatcherService(IServiceProvider provider, ILogger<WatcherService> logger, IFileService file, int secondsToWait = 600)
+    public WatcherService(IServiceProvider provider, ILogger<WatcherService> logger, IFileService file, int secondsToWait = 60)
     {
         _logger = logger;
         _provider = provider;
@@ -67,7 +67,7 @@ public class WatcherService : IWatcherService
         }
         catch (Exception e)
         {
-            _logger.LogError("AddStream", e);
+            _logger.LogError(e, "AddStream");
             return false;
         }
 
@@ -98,7 +98,7 @@ public class WatcherService : IWatcherService
         }
         catch (Exception e)
         {
-            _logger.LogError("RemoveStream", e);
+            _logger.LogError(e, "RemoveStream");
             return false;
         }
 
@@ -161,7 +161,7 @@ public class WatcherService : IWatcherService
         }
         catch (Exception e)
         {
-            _logger.LogError("StartStreamScrapperAsync", e);
+            _logger.LogError(e, "StartStreamScrapperAsync");
             return false;
         }
     }
@@ -192,7 +192,7 @@ public class WatcherService : IWatcherService
         }
         catch (Exception e)
         {
-            _logger.LogError("StopStreamScrapperAsync", e);
+            _logger.LogError(e, "StopStreamScrapperAsync");
             return false;
         }
     }
@@ -222,7 +222,7 @@ public class WatcherService : IWatcherService
         }
         catch (Exception e)
         {
-            _logger.LogError("StartAllStreamScrapper", e);
+            _logger.LogError(e, "StartAllStreamScrapper");
         }
     }
 
@@ -247,7 +247,7 @@ public class WatcherService : IWatcherService
         }
         catch (Exception e)
         {
-            _logger.LogError("StopAllStreamScrapper", e);
+            _logger.LogError(e, "StopAllStreamScrapper");
         }
     }
 
@@ -260,7 +260,7 @@ public class WatcherService : IWatcherService
             {
                 AddStream(str[0], str[1]);
             }
-            Thread.Sleep(1000);
+            Thread.Sleep(100);
         }
     }
 
@@ -362,7 +362,7 @@ public class WatcherService : IWatcherService
                             }
                             catch (Exception e)
                             {
-                                _logger.LogError("StreamingWatcherAsync->Debug", e);
+                                _logger.LogError(e, "StreamingWatcherAsync->Debug");
                             }
                         }, CancellationToken.None);
                         debugCounter = 10;
@@ -379,7 +379,7 @@ public class WatcherService : IWatcherService
             }
             catch (Exception e)
             {
-                _logger.LogError("StreamingWatcherAsync", e);
+                _logger.LogError(e, "StreamingWatcherAsync");
             }
         }
 

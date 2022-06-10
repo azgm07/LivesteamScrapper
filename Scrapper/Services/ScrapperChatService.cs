@@ -123,7 +123,7 @@ public class ScrapperChatService : IScrapperChatService
                 catch (Exception e)
                 {
                     IsScrapping = false;
-                    _logger.LogError("OpenScrapper", e);
+                    _logger.LogError( e, "OpenScrapper");
                 }
             }
             else
@@ -134,7 +134,7 @@ public class ScrapperChatService : IScrapperChatService
         }
         catch (Exception e)
         {
-            _logger.LogError("OpenScrapper", e);
+            _logger.LogError( e, "OpenScrapper");
             _logger.LogInformation("Browser page is not ready for {website}/{livestream}", Website, Livestream);
             IsScrapping = false;
             return IsScrapping;
@@ -164,7 +164,7 @@ public class ScrapperChatService : IScrapperChatService
         }
         catch (Exception e)
         {
-            _logger.LogError("ReloadScrapper", e);
+            _logger.LogError( e, "ReloadScrapper");
             _logger.LogInformation("Browser page is not ready for {website}/{livestream}", Website, Livestream);
             isReloading = false;
         }
@@ -363,7 +363,7 @@ public class ScrapperChatService : IScrapperChatService
         }
         catch (Exception e)
         {
-            _logger.LogError("ReadChat", e);
+            _logger.LogError( e, "ReadChat");
             return (new List<ChatMessageModel>(), -1);
         }
     }
@@ -408,7 +408,7 @@ public class ScrapperChatService : IScrapperChatService
         }
         catch (Exception e)
         {
-            _logger.LogError("ReadViewerCounter", e);
+            _logger.LogError( e, "ReadViewerCounter");
             return null;
         }
     }
@@ -432,7 +432,7 @@ public class ScrapperChatService : IScrapperChatService
         }
         catch (Exception e)
         {
-            _logger.LogError("ReadCurrentGame", e);
+            _logger.LogError( e, "ReadCurrentGame");
             return null;
         }
     }
@@ -822,7 +822,7 @@ public class ScrapperChatService : IScrapperChatService
                     }
                     catch (Exception e)
                     {
-                        _logger.LogError("PrepareScrapperPage", e);
+                        _logger.LogError( e, "PrepareScrapperPage");
                     }
                 }
                 break;
@@ -913,7 +913,7 @@ public class ScrapperChatService : IScrapperChatService
         }
         catch (Exception e)
         {
-            _logger.LogError("GetChatMessages", e);
+            _logger.LogError( e, "GetChatMessages");
         }
 
         return scrapeMessages;

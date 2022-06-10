@@ -108,9 +108,9 @@ public sealed class BrowserService : IBrowserService
             var wait = new WebDriverWait(Browser, TimeSpan.FromSeconds(timeout));
             return wait.Until(ExpectedConditions.ElementExists(elementLocator));
         }
-        catch (NoSuchElementException)
+        catch (NoSuchElementException e)
         {
-            _logger.LogError("Element locator ({locator}) was not found in current context page.", elementLocator);
+            _logger.LogError(e, "Element locator ({locator}) was not found in current context page.", elementLocator);
             throw;
         }
     }
@@ -122,9 +122,9 @@ public sealed class BrowserService : IBrowserService
             var wait = new WebDriverWait(Browser, TimeSpan.FromSeconds(timeout));
             return wait.Until(ExpectedConditions.ElementIsVisible(elementLocator));
         }
-        catch (NoSuchElementException)
+        catch (NoSuchElementException e)
         {
-            _logger.LogError("Element locator ({locator}) was not found.", elementLocator);
+            _logger.LogError(e, "Element locator ({locator}) was not found.", elementLocator);
             throw;
         }
     }
@@ -136,9 +136,9 @@ public sealed class BrowserService : IBrowserService
             var wait = new WebDriverWait(Browser, TimeSpan.FromSeconds(timeout));
             return wait.Until(ExpectedConditions.ElementToBeClickable(elementLocator));
         }
-        catch (NoSuchElementException)
+        catch (NoSuchElementException e)
         {
-            _logger.LogError("Element locator ({locator}) was not found.", elementLocator);
+            _logger.LogError(e, "Element locator ({locator}) was not found.", elementLocator);
             throw;
         }
     }
