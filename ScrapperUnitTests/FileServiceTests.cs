@@ -12,7 +12,7 @@ namespace ScrapperUnitTests
         [Fact]
         public void WriteAndReadFile()
         {
-            ILogger<Scrapper.Services.FileService> logger = Mock.Of<ILogger<FileService>>();
+            ILogger<FileService> logger = Mock.Of<ILogger<FileService>>();
 
             FileService fileService = new(logger);
 

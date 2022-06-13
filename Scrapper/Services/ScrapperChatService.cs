@@ -1,4 +1,5 @@
-﻿using OpenQA.Selenium;
+﻿using Microsoft.Extensions.Logging;
+using OpenQA.Selenium;
 using Scrapper.Models;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
@@ -38,9 +39,9 @@ public interface IScrapperChatService
     void WriteData(List<string> lines, string website, string livestream, string type, bool startNew = false);
 }
 
-public class old_ScrapperChatService : IScrapperChatService
+public class ScrapperChatService : IScrapperChatService
 {
-    private readonly ILogger<old_ScrapperChatService> _logger;
+    private readonly ILogger<ScrapperChatService> _logger;
 
     public bool IsScrapping { get; private set; }
     public EnvironmentModel Environment { get; private set; }
@@ -70,7 +71,7 @@ public class old_ScrapperChatService : IScrapperChatService
     public string LastMessage { get; private set; }
 
     //Constructor
-    public old_ScrapperChatService(ILogger<old_ScrapperChatService> logger, IBrowserService browser, IBrowserService browserChat, ITimeService time, IFileService file)
+    public ScrapperChatService(ILogger<ScrapperChatService> logger, IBrowserService browser, IBrowserService browserChat, ITimeService time, IFileService file)
     {
         _logger = logger;
         Environment = new();

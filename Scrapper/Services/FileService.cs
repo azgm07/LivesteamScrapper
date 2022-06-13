@@ -1,4 +1,6 @@
-﻿namespace Scrapper.Services;
+﻿using Microsoft.Extensions.Logging;
+
+namespace Scrapper.Services;
 
 public interface IFileService
 {

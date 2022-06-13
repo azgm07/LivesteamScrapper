@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.Extensions.Logging;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
@@ -108,7 +108,7 @@ public sealed class BrowserService : IBrowserService
             var wait = new WebDriverWait(Browser, TimeSpan.FromSeconds(timeout));
             return wait.Until(ExpectedConditions.ElementExists(elementLocator));
         }
-        catch (NoSuchElementException e)
+        catch (NoSuchElementException)
         {
             _logger.LogWarning("Element locator ({locator}) was not found in current context page.", elementLocator);
             throw;
@@ -122,7 +122,7 @@ public sealed class BrowserService : IBrowserService
             var wait = new WebDriverWait(Browser, TimeSpan.FromSeconds(timeout));
             return wait.Until(ExpectedConditions.ElementIsVisible(elementLocator));
         }
-        catch (NoSuchElementException e)
+        catch (NoSuchElementException)
         {
             _logger.LogWarning("Element locator ({locator}) was not visible.", elementLocator);
             throw;
@@ -136,7 +136,7 @@ public sealed class BrowserService : IBrowserService
             var wait = new WebDriverWait(Browser, TimeSpan.FromSeconds(timeout));
             return wait.Until(ExpectedConditions.ElementToBeClickable(elementLocator));
         }
-        catch (NoSuchElementException e)
+        catch (NoSuchElementException)
         {
             _logger.LogWarning("Element locator ({locator}) was not clickable.", elementLocator);
             throw;

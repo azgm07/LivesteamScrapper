@@ -1,8 +1,8 @@
-﻿using Scrapper.Models;
+﻿using ScrapperAspNet.Models;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 
-namespace Scrapper.Controllers;
+namespace ScrapperAspNet.Controllers;
 
 public class HomeController : Controller
 {

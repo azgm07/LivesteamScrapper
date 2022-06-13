@@ -3,16 +3,18 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.1.32407.343
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Scrapper", "Scrapper\Scrapper.csproj", "{12F7BF80-6428-40E8-A526-141A4D356D78}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ScrapperUnitTests", "ScrapperUnitTests\ScrapperUnitTests.csproj", "{27859DAD-1263-491E-B6AA-6719BA19DD86}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ScrapperBlazor", "ScrapperBlazor\ScrapperBlazor.csproj", "{72003330-1F4F-4B75-9D69-1C5F16FCA7B4}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ScrapperWin", "ScrapperWin\ScrapperWin.csproj", "{682B163D-90CE-4E2F-BD7B-3B34BE040B88}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ScrapperAspNet", "ScrapperAspNet\ScrapperAspNet.csproj", "{91456547-FEA0-426D-93FF-215A51BEC920}"
 	ProjectSection(ProjectDependencies) = postProject
-		{12F7BF80-6428-40E8-A526-141A4D356D78} = {12F7BF80-6428-40E8-A526-141A4D356D78}
+		{F0BD4600-ED90-4E63-BF24-DEAD7D7AA070} = {F0BD4600-ED90-4E63-BF24-DEAD7D7AA070}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScrapperBlazor", "ScrapperBlazor\ScrapperBlazor.csproj", "{72003330-1F4F-4B75-9D69-1C5F16FCA7B4}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScrapperWin", "ScrapperWin\ScrapperWin.csproj", "{682B163D-90CE-4E2F-BD7B-3B34BE040B88}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scrapper", "Scrapper\Scrapper.csproj", "{F0BD4600-ED90-4E63-BF24-DEAD7D7AA070}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -20,10 +22,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{12F7BF80-6428-40E8-A526-141A4D356D78}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{12F7BF80-6428-40E8-A526-141A4D356D78}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{12F7BF80-6428-40E8-A526-141A4D356D78}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{12F7BF80-6428-40E8-A526-141A4D356D78}.Release|Any CPU.Build.0 = Release|Any CPU
 		{27859DAD-1263-491E-B6AA-6719BA19DD86}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{27859DAD-1263-491E-B6AA-6719BA19DD86}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{27859DAD-1263-491E-B6AA-6719BA19DD86}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -36,6 +34,14 @@ Global
 		{682B163D-90CE-4E2F-BD7B-3B34BE040B88}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{682B163D-90CE-4E2F-BD7B-3B34BE040B88}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{682B163D-90CE-4E2F-BD7B-3B34BE040B88}.Release|Any CPU.Build.0 = Release|Any CPU
+		{91456547-FEA0-426D-93FF-215A51BEC920}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{91456547-FEA0-426D-93FF-215A51BEC920}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{91456547-FEA0-426D-93FF-215A51BEC920}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{91456547-FEA0-426D-93FF-215A51BEC920}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F0BD4600-ED90-4E63-BF24-DEAD7D7AA070}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F0BD4600-ED90-4E63-BF24-DEAD7D7AA070}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F0BD4600-ED90-4E63-BF24-DEAD7D7AA070}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F0BD4600-ED90-4E63-BF24-DEAD7D7AA070}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

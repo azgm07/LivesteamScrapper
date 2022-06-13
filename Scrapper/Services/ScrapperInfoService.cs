@@ -1,4 +1,5 @@
-﻿using OpenQA.Selenium;
+﻿using Microsoft.Extensions.Logging;
+using OpenQA.Selenium;
 using Scrapper.Models;
 using Scrapper.Utils;
 using System.Collections.Concurrent;
@@ -143,7 +144,7 @@ public class ScrapperInfoService : IScrapperInfoService
 
             isReloading = false;
         }
-        catch (Exception e)
+        catch (Exception)
         {
             _logger.LogWarning("Browser page is not ready for {website}/{livestream}", Website, Livestream);
             isReloading = false;
@@ -367,7 +368,7 @@ public class ScrapperInfoService : IScrapperInfoService
             CurrentGame = currentGame;
             return currentGame;
         }
-        catch (Exception e)
+        catch (Exception)
         {
             _logger.LogWarning("Element for Current Game was not found. ({locator})", Environment.GameContainer);
             return null;
@@ -632,7 +633,7 @@ public class ScrapperInfoService : IScrapperInfoService
                         _browser.WaitUntilElementClickable(LiveElementsModel.GetElements(Environment.Website).OpenLive).Click();
                     }
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     _logger.LogWarning("Prepare scrapper page failed.");
                     throw;

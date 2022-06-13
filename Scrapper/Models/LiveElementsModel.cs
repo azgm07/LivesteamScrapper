@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using OpenQA.Selenium;
 
 namespace Scrapper.Models;

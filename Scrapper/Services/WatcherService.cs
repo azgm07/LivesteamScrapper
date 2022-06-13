@@ -1,4 +1,6 @@
-﻿using Scrapper.Models;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Scrapper.Models;
 using static Scrapper.Models.EnumsModel;
 
 namespace Scrapper.Services;
