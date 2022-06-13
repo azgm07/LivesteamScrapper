@@ -374,9 +374,9 @@ public class WatcherService : IWatcherService
                                 }
                                 _file.WriteCsv("files/debug", "status.csv", lines, true);
                             }
-                            catch (Exception e)
+                            catch (Exception)
                             {
-                                _logger.LogWarning(e, "Failed to write the debugger for scrappers status.");
+                                _logger.LogWarning("Failed to write the debugger for scrappers status.");
                             }
                         }, CancellationToken.None);
                         flush = false;

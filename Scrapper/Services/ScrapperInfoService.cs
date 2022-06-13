@@ -111,9 +111,9 @@ public class ScrapperInfoService : IScrapperInfoService
             }
             return IsScrapping;
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            _logger.LogWarning(e, "Browser page is not ready for {website}/{livestream}", Website, Livestream);
+            _logger.LogWarning("Browser page is not ready for {website}/{livestream}", Website, Livestream);
             IsScrapping = false;
             return IsScrapping;
         }
@@ -145,7 +145,7 @@ public class ScrapperInfoService : IScrapperInfoService
         }
         catch (Exception e)
         {
-            _logger.LogWarning(e, "Browser page is not ready for {website}/{livestream}", Website, Livestream);
+            _logger.LogWarning("Browser page is not ready for {website}/{livestream}", Website, Livestream);
             isReloading = false;
         }
 
@@ -369,7 +369,7 @@ public class ScrapperInfoService : IScrapperInfoService
         }
         catch (Exception e)
         {
-            _logger.LogWarning(e, "Element for Current Game was not found. ({locator})", Environment.GameContainer);
+            _logger.LogWarning("Element for Current Game was not found. ({locator})", Environment.GameContainer);
             return null;
         }
     }
@@ -634,7 +634,7 @@ public class ScrapperInfoService : IScrapperInfoService
                 }
                 catch (Exception e)
                 {
-                    _logger.LogWarning(e, "PrepareScrapperPage failed.");
+                    _logger.LogWarning("Prepare scrapper page failed.");
                     throw;
                 }
                 break;

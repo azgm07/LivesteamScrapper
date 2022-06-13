@@ -110,7 +110,7 @@ public sealed class BrowserService : IBrowserService
         }
         catch (NoSuchElementException e)
         {
-            _logger.LogWarning(e, "Element locator ({locator}) was not found in current context page.", elementLocator);
+            _logger.LogWarning("Element locator ({locator}) was not found in current context page.", elementLocator);
             throw;
         }
     }
@@ -124,7 +124,7 @@ public sealed class BrowserService : IBrowserService
         }
         catch (NoSuchElementException e)
         {
-            _logger.LogWarning(e, "Element locator ({locator}) was not found.", elementLocator);
+            _logger.LogWarning("Element locator ({locator}) was not visible.", elementLocator);
             throw;
         }
     }
@@ -138,7 +138,7 @@ public sealed class BrowserService : IBrowserService
         }
         catch (NoSuchElementException e)
         {
-            _logger.LogWarning(e, "Element locator ({locator}) was not found.", elementLocator);
+            _logger.LogWarning("Element locator ({locator}) was not clickable.", elementLocator);
             throw;
         }
     }
