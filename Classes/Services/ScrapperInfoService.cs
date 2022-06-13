@@ -106,14 +106,14 @@ public class ScrapperInfoService : IScrapperInfoService
             }
             else
             {
-                _logger.LogWarning("Browser page is not ready for {website}/{livestream}", Website, Livestream);
+                _logger.LogInformation("Browser page is not ready for {website}/{livestream}", Website, Livestream);
                 IsScrapping = false;
             }
             return IsScrapping;
         }
         catch (Exception e)
         {
-            _logger.LogWarning(e, "Browser page is not ready for {website}/{livestream}", Website, Livestream);
+            _logger.LogError(e, "OpenScrapper");
             IsScrapping = false;
             return IsScrapping;
         }
@@ -145,7 +145,8 @@ public class ScrapperInfoService : IScrapperInfoService
         }
         catch (Exception e)
         {
-            _logger.LogWarning(e, "Browser page is not ready for {website}/{livestream}", Website, Livestream);
+            _logger.LogError(e, "ReloadScrapper");
+            _logger.LogInformation("Browser page is not ready for {website}/{livestream}", Website, Livestream);
             isReloading = false;
         }
 
@@ -258,7 +259,7 @@ public class ScrapperInfoService : IScrapperInfoService
         }
         else
         {
-            _logger.LogWarning("Scrapper failed to start for {website}/{livestream}", Website, Livestream);
+            _logger.LogInformation("Scrapper failed to start for {website}/{livestream}", Website, Livestream);
             Stop();
         }
         return isOpen;
@@ -369,7 +370,7 @@ public class ScrapperInfoService : IScrapperInfoService
         }
         catch (Exception e)
         {
-            _logger.LogWarning(e, "Element for Current Game was not found. ({locator})", Environment.GameContainer);
+            _logger.LogError(e, "ReadCurrentGame");
             return null;
         }
     }
@@ -397,7 +398,7 @@ public class ScrapperInfoService : IScrapperInfoService
             //Break if too many fails
             if (failedAtempts >= MaxFails)
             {
-                _logger.LogWarning("Scrapper failed and has to stop for {website}/{livestream}", Website, Livestream);
+                _logger.LogInformation("Scrapper failed and has to stop for {website}/{livestream}", Website, Livestream);
                 break;
             }
 
@@ -525,7 +526,7 @@ public class ScrapperInfoService : IScrapperInfoService
             //Break if too many fails
             if (failedAtempts >= MaxFails)
             {
-                _logger.LogWarning("Scrapper failed and has to stop for {website}/{livestream}", Website, Livestream);
+                _logger.LogInformation("Scrapper failed and has to stop for {website}/{livestream}", Website, Livestream);
                 Stop();
                 break;
             }
@@ -634,7 +635,7 @@ public class ScrapperInfoService : IScrapperInfoService
                 }
                 catch (Exception e)
                 {
-                    _logger.LogWarning(e, "PrepareScrapperPage failed.");
+                    _logger.LogError(e, "PrepareScrapperPage");
                     throw;
                 }
                 break;

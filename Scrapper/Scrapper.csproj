@@ -16,7 +16,7 @@
 
   <ItemGroup>
     <Content Include="files\config\streams.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 

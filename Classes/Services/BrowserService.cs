@@ -97,8 +97,10 @@ public sealed class BrowserService : IBrowserService
         options.AddUserProfilePreference("profile.default_content_setting_values.app_banner", 2);
         options.AddUserProfilePreference("profile.default_content_setting_values.site_engagement", 2);
         options.AddUserProfilePreference("profile.default_content_setting_values.durable_storage", 2);
-        
-        Browser = new ChromeDriver(options);
+
+        using var chromeDriverService = ChromeDriverService.CreateDefaultService();
+        chromeDriverService.HideCommandPromptWindow = true;
+        Browser = new ChromeDriver(chromeDriverService, options);
     }
 
     public IWebElement WaitUntilElementExists(By elementLocator, int timeout = 10)
@@ -110,7 +112,7 @@ public sealed class BrowserService : IBrowserService
         }
         catch (NoSuchElementException e)
         {
-            _logger.LogWarning(e, "Element locator ({locator}) was not found in current context page.", elementLocator);
+            _logger.LogError(e, "Element locator ({locator}) was not found in current context page.", elementLocator);
             throw;
         }
     }
@@ -124,7 +126,7 @@ public sealed class BrowserService : IBrowserService
         }
         catch (NoSuchElementException e)
         {
-            _logger.LogWarning(e, "Element locator ({locator}) was not found.", elementLocator);
+            _logger.LogError(e, "Element locator ({locator}) was not found.", elementLocator);
             throw;
         }
     }
@@ -138,7 +140,7 @@ public sealed class BrowserService : IBrowserService
         }
         catch (NoSuchElementException e)
         {
-            _logger.LogWarning(e, "Element locator ({locator}) was not found.", elementLocator);
+            _logger.LogError(e, "Element locator ({locator}) was not found.", elementLocator);
             throw;
         }
     }

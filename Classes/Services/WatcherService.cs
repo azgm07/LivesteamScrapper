@@ -67,7 +67,7 @@ public class WatcherService : IWatcherService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Failed to add the streaming");
+            _logger.LogError(e, "AddStream");
             return false;
         }
 
@@ -98,7 +98,7 @@ public class WatcherService : IWatcherService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Failed to remove the streaming");
+            _logger.LogError(e, "RemoveStream");
             return false;
         }
 
@@ -161,7 +161,7 @@ public class WatcherService : IWatcherService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Run the scrapper throwed an exception");
+            _logger.LogError(e, "StartStreamScrapperAsync");
             return false;
         }
     }
@@ -192,7 +192,7 @@ public class WatcherService : IWatcherService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Stop the scrapper throwed an exception");
+            _logger.LogError(e, "StopStreamScrapperAsync");
             return false;
         }
     }
@@ -222,7 +222,7 @@ public class WatcherService : IWatcherService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Start all the scrappers throwed an exception");
+            _logger.LogError(e, "StartAllStreamScrapper");
         }
     }
 
@@ -247,7 +247,7 @@ public class WatcherService : IWatcherService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Stop all the scrappers throwed an exception");
+            _logger.LogError(e, "StopAllStreamScrapper");
         }
     }
 
@@ -376,7 +376,7 @@ public class WatcherService : IWatcherService
                             }
                             catch (Exception e)
                             {
-                                _logger.LogWarning(e, "Failed to write the debugger for scrappers status.");
+                                _logger.LogError(e, "StreamingWatcherAsync->Debug");
                             }
                         }, CancellationToken.None);
                         flush = false;
@@ -392,7 +392,7 @@ public class WatcherService : IWatcherService
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Main watcher for scrappers throwed an exception.");
+                _logger.LogError(e, "StreamingWatcherAsync");
             }
         }
 
