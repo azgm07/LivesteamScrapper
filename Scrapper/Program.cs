@@ -12,9 +12,10 @@ public static class Program
         var builder = Host.CreateDefaultBuilder(args);
         builder.ConfigureServices(services =>
         {
-            services.AddHostedService<WatcherService>();
-            services.AddScoped<IBrowserService, BrowserService>();
+            services.AddHostedService<HostService>();
             services.AddSingleton<IFileService, FileService>();
+            services.AddSingleton<IWatcherService, WatcherService>();
+            services.AddScoped<IBrowserService, BrowserService>();
             services.AddScoped<IScrapperInfoService, ScrapperInfoService>();
             services.AddScoped<ITimeService, TimeService>();
         });

@@ -2,14 +2,14 @@
 
 <PageTitle>Index</PageTitle>
 
-@using ScrapperBlazorLibrary.Data
-@inject WeatherForecastService ForecastService
+@using Scrapper.Services
+@inject IWatcherService WatcherService
 
 <h1>Weather forecast</h1>
 
 <p>This component demonstrates fetching data from a service.</p>
 
-@if (forecasts == null)
+@if (streams == null)
 {
     <p><em>Loading...</em></p>
 }
@@ -18,20 +18,20 @@ else
     <table class="table">
         <thead>
             <tr>
-                <th>Date</th>
-                <th>Temp. (C)</th>
-                <th>Temp. (F)</th>
-                <th>Summary</th>
+                <th>Website</th>
+                <th>Channel</th>
+                <th>Status</th>
+                <th>WaitTime</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var forecast in forecasts)
+            @foreach (var stream in streams)
             {
                 <tr>
-                    <td>@forecast.Date.ToShortDateString()</td>
-                    <td>@forecast.TemperatureC</td>
-                    <td>@forecast.TemperatureF</td>
-                    <td>@forecast.Summary</td>
+                    <td>@stream.Website</td>
+                    <td>@stream.Channel</td>
+                    <td>@stream.Status</td>
+                    <td>@stream.WaitTime</td>
                 </tr>
             }
         </tbody>
@@ -39,10 +39,10 @@ else
 }
 
 @code {
-    private WeatherForecast[]? forecasts;
+    private List<Stream>? streams;
 
     protected override async Task OnInitializedAsync()
     {
-        forecasts = await ForecastService.GetForecastAsync(DateTime.Now);
+        streams = await Task.Run(() => WatcherService.ListStreams);
     }
 }

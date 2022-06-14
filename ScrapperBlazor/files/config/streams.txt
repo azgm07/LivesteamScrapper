@@ -1,3 +1,6 @@
 twitch,gaules
 booyah,vanquilha
 twitch,yoda
+twitch,yetz
+twitch,alanzoka
+twitch,rakin

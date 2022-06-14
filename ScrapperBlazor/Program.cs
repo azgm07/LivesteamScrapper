@@ -18,12 +18,13 @@ public static class Program
         builder.Services.AddServerSideBlazor();
         builder.Services.AddSingleton<WeatherForecastService>();
         builder.Services.AddSingleton<AppData>();
-
-        builder.Services.AddHostedService<WatcherService>();
-        builder.Services.AddScoped<IBrowserService, BrowserService>();
+        builder.Services.AddHostedService<HostService>();
         builder.Services.AddSingleton<IFileService, FileService>();
+        builder.Services.AddSingleton<IWatcherService, WatcherService>();
+        builder.Services.AddScoped<IBrowserService, BrowserService>();
         builder.Services.AddScoped<IScrapperInfoService, ScrapperInfoService>();
         builder.Services.AddScoped<ITimeService, TimeService>();
+        builder.Services.AddSingleton<IWatcherService, WatcherService>();
 
         var app = builder.Build();
 
