@@ -1,5 +1,5 @@
 ﻿@page "/counter"
-
+@inject Data.AppState AppState
 <PageTitle>Counter</PageTitle>
 
 <h1>Counter</h1>
@@ -14,5 +14,6 @@
     private void IncrementCount()
     {
         currentCount++;
+        AppState.Counter++;
     }
 }
