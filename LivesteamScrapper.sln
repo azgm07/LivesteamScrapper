@@ -13,8 +13,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ScrapperCoreWebApp", "Scrap
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ScrapperBlazorLibrary", "ScrapperBlazorLibrary\ScrapperBlazorLibrary.csproj", "{D3ADAD54-EA51-4E22-AD78-DBCAF1EE2DA0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScrapperMaui", "ScrapperMaui\ScrapperMaui.csproj", "{CCFAB4B6-7F7C-4F9F-AC8F-5B588BB63A8C}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,10 +39,6 @@ Global
 		{D3ADAD54-EA51-4E22-AD78-DBCAF1EE2DA0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D3ADAD54-EA51-4E22-AD78-DBCAF1EE2DA0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D3ADAD54-EA51-4E22-AD78-DBCAF1EE2DA0}.Release|Any CPU.Build.0 = Release|Any CPU
-		{CCFAB4B6-7F7C-4F9F-AC8F-5B588BB63A8C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{CCFAB4B6-7F7C-4F9F-AC8F-5B588BB63A8C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CCFAB4B6-7F7C-4F9F-AC8F-5B588BB63A8C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CCFAB4B6-7F7C-4F9F-AC8F-5B588BB63A8C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
