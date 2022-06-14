@@ -19,7 +19,7 @@ public interface IWatcherService
     public int SecondsToWait { get; set; }
 }
 
-public class WatcherService : IWatcherService
+public class WatcherService : BackgroundService, IWatcherService
 {
     public List<Stream> ListStreams { get; private set; }
     public int SecondsToWait { get; set; }
@@ -41,6 +41,25 @@ public class WatcherService : IWatcherService
         ListStreams = new();
         SecondsToWait = secondsToWait;
         isReady = false;
+    }
+
+    public override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        try
+        {
+            List<string> lines = _file.ReadCsv("files/config", "streams.txt");
+
+            if (!lines.Any())
+            {
+                _logger.LogWarning("Config file is empty, waiting for entries on web browser.");
+            }
+            return StreamingWatcherAsync(lines, EnumsModel.ScrapperMode.Delayed, stoppingToken);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Unhandled exception!");
+            return Task.CompletedTask;
+        }
     }
 
     public bool AddStream(string website, string channelPath)

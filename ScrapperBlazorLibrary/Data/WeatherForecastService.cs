@@ -1,4 +1,4 @@
-namespace ScrapperBlazor.Data
+namespace ScrapperBlazorLibrary.Data
 {
     public class WeatherForecastService
     {

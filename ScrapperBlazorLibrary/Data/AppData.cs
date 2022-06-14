@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace ScrapperBlazorLibrary.Data
 {
-    public class AppState
+    public class AppData
     {
         public int Counter { get; set; }
     }

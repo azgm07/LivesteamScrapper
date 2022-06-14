@@ -49,7 +49,6 @@
             this.ClientSize = new System.Drawing.Size(1264, 681);
             this.Controls.Add(this.blazorWebView1);
             this.Name = "Form1";
-            this.Text = "Form1";
             this.ResumeLayout(false);
 
         }

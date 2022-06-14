@@ -9,6 +9,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="files\config\streams.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="files\config\streams.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="6.0.312" />
   </ItemGroup>
 

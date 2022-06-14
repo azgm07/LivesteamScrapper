@@ -1,33 +1,49 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
-using ScrapperBlazor.Data;
+using Scrapper.Models;
+using Scrapper.Services;
 using ScrapperBlazorLibrary.Data;
 
-var builder = WebApplication.CreateBuilder(args);
+namespace ScrapperBlazor.Main;
 
-// Add services to the container.
-builder.Services.AddRazorPages();
-builder.Services.AddServerSideBlazor();
-builder.Services.AddSingleton<WeatherForecastService>();
-builder.Services.AddSingleton<AppState>();
 
-var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
+public static class Program
 {
-    app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
+    public static void Main(string[] args)
+    {
+        var builder = WebApplication.CreateBuilder(args);
+
+        // Add services to the container.
+        builder.Services.AddRazorPages();
+        builder.Services.AddServerSideBlazor();
+        builder.Services.AddSingleton<WeatherForecastService>();
+        builder.Services.AddSingleton<AppData>();
+
+        builder.Services.AddHostedService<WatcherService>();
+        builder.Services.AddScoped<IBrowserService, BrowserService>();
+        builder.Services.AddSingleton<IFileService, FileService>();
+        builder.Services.AddScoped<IScrapperInfoService, ScrapperInfoService>();
+        builder.Services.AddScoped<ITimeService, TimeService>();
+
+        var app = builder.Build();
+
+        // Configure the HTTP request pipeline.
+        if (!app.Environment.IsDevelopment())
+        {
+            app.UseExceptionHandler("/Error");
+            // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+            app.UseHsts();
+        }
+
+        app.UseHttpsRedirection();
+
+        app.UseStaticFiles();
+
+        app.UseRouting();
+
+        app.MapBlazorHub();
+        app.MapFallbackToPage("/_Host");
+
+        app.Run();
+    }
 }
-
-app.UseHttpsRedirection();
-
-app.UseStaticFiles();
-
-app.UseRouting();
-
-app.MapBlazorHub();
-app.MapFallbackToPage("/_Host");
-
-app.Run();
