@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 
 namespace ScrapperBlazor.Pages
@@ -22,6 +23,7 @@ namespace ScrapperBlazor.Pages
         public void OnGet()
         {
             RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier;
+            _logger.LogInformation("{Request}", RequestId);
         }
     }
 }
