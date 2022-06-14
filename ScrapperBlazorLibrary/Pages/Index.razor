@@ -3,11 +3,10 @@
 <PageTitle>Index</PageTitle>
 
 @using Scrapper.Services
+@using Scrapper.Models
 @inject IWatcherService WatcherService
 
-<h1>Weather forecast</h1>
-
-<p>This component demonstrates fetching data from a service.</p>
+<h1>Livestreams</h1>
 
 @if (streams == null)
 {
@@ -43,6 +42,12 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        streams = await Task.Run(() => WatcherService.ListStreams);
+        await Task.Run(() => Stream.ChangeScrapperEvent += UpdateOnChangeAsync);
+    }
+
+    protected async void UpdateOnChangeAsync(EnumsModel.ScrapperStatus scrapperStatus)
+    {
+        streams = WatcherService.ListStreams;
+        await InvokeAsync(() => { StateHasChanged(); });
     }
 }

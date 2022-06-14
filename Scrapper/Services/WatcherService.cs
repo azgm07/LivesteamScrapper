@@ -421,8 +421,24 @@ public sealed class Stream : IDisposable
             return (IScrapperInfoService)_scope.ServiceProvider.GetRequiredService(typeof(IScrapperInfoService));
         }
     }
-    public ScrapperStatus Status { get; set; }
+    private ScrapperStatus _status;
+    public ScrapperStatus Status
+    {
+        get
+        {
+            return _status;
+        }
+        set
+        {
+            ChangeScrapperEvent?.Invoke(value);
+            _status = value;
+        }
+    }
     public DateTime WaitTime { get; set; }
+        
+    public delegate void ChangeScrapperStatusEventHandler(ScrapperStatus status);
+
+    public static event ChangeScrapperStatusEventHandler? ChangeScrapperEvent;
 
     public Stream(string website, string channel, EnvironmentModel environment, IServiceProvider provider)
     {
