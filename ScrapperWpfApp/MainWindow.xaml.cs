@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -56,5 +57,11 @@ namespace ScrapperWpfApp
                 _ = "";
             }
         }
+
+        private void MainWindow_Closing(object sender, CancelEventArgs e)
+        {
+            cts.Cancel();
+        }
+
     }
 }

@@ -4,6 +4,9 @@
 
 @using Scrapper.Services
 @using Scrapper.Models
+@using System.Collections.Concurrent
+@using System.Timers
+@using System.Text.RegularExpressions
 @inject IWatcherService WatcherService
 
 <h1>Livestreams</h1>
@@ -17,20 +20,27 @@ else
     <table class="table">
         <thead>
             <tr>
+                <th></th>
                 <th>Website</th>
                 <th>Channel</th>
                 <th>Status</th>
-                <th>WaitTime</th>
             </tr>
         </thead>
         <tbody>
             @foreach (var stream in streams)
             {
                 <tr>
-                    <td>@stream.Website</td>
+                    <td><input type="checkbox" name="brand"></td>
+                    <td>@Regex.Replace(stream.Website, "^[a-z]", m => m.Value.ToUpper())</td>
                     <td>@stream.Channel</td>
-                    <td>@stream.Status</td>
-                    <td>@stream.WaitTime</td>
+                    @if (stream.Status == EnumsModel.ScrapperStatus.Waiting)
+                    {
+                        <td>@stream.Status (@TimeSpan.FromMilliseconds(stream.WaitTimer.TimeLeft).ToString(@"hh\:mm\:ss"))</td>
+                    }
+                    else
+                    {
+                        <td>@stream.Status</td>
+                    }
                 </tr>
             }
         </tbody>
@@ -38,16 +48,21 @@ else
 }
 
 @code {
-    private List<Stream>? streams;
+    private BlockingCollection<Stream> streams = new();
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        await Task.Run(() => Stream.ChangeScrapperEvent += UpdateOnChangeAsync);
+        Task.Run(UpdateOnSeconds, WatcherService.CancellationToken);
     }
 
-    protected async void UpdateOnChangeAsync(EnumsModel.ScrapperStatus scrapperStatus)
+    protected async Task UpdateOnSeconds()
     {
-        streams = WatcherService.ListStreams;
-        await InvokeAsync(() => { StateHasChanged(); });
+        while (true)
+        {
+            List<Stream> localList = WatcherService.ListStreams;
+            streams = new BlockingCollection<Stream>(new ConcurrentQueue<Stream>(localList));;
+            await InvokeAsync(() => { StateHasChanged(); });
+            await Task.Delay(1000);            
+        }
     }
 }

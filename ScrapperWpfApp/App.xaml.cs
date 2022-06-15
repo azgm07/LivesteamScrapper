@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Scrapper.Services;
 using System;
+using System.Threading;
 using System.Windows;
 
 namespace ScrapperWpfApp

@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Scrapper.Models;
+using System.Collections.Concurrent;
+using System.Timers;
 using static Scrapper.Models.EnumsModel;
 
 namespace Scrapper.Services;
@@ -17,6 +19,7 @@ public interface IWatcherService
     Task StreamingWatcherAsync(List<string> streams, ScrapperMode mode, CancellationToken token);
     public List<Stream> ListStreams { get; }
     public int SecondsToWait { get; set; }
+    public CancellationToken CancellationToken { get; }
 }
 
 public class WatcherService : IWatcherService
@@ -24,23 +27,27 @@ public class WatcherService : IWatcherService
     public List<Stream> ListStreams { get; private set; }
     public int SecondsToWait { get; set; }
 
-    private CancellationToken ct;
+    public CancellationToken CancellationToken { get; private set; }
     private ScrapperMode scrapperMode;
     private readonly ILogger<WatcherService> _logger;
     private readonly IServiceProvider _provider;
     private readonly IFileService _file;
     private bool isReady;
+    private readonly ConcurrentStack<Func<Task>> processesStack;
 
     public WatcherService(IServiceProvider provider, ILogger<WatcherService> logger, IFileService file, int secondsToWait = 300)
     {
         _logger = logger;
         _provider = provider;
         _file = file;
-        ct = new();
+        CancellationToken = new();
         scrapperMode = ScrapperMode.Delayed;
         ListStreams = new();
         SecondsToWait = secondsToWait;
         isReady = false;
+        processesStack = new();
+
+        _ = Task.Run(() => ProcessStreamStackAsync());
     }
 
     public bool AddStream(string website, string channelPath)
@@ -56,10 +63,13 @@ public class WatcherService : IWatcherService
             if (index < 0)
             {
                 EnvironmentModel environment = EnvironmentModel.GetEnvironment(website);
-                Stream stream = new(website, channelPath, environment, _provider);
-                stream.Status = ScrapperStatus.Running;
+                Stream stream = new(website, channelPath, environment, _provider, SecondsToWait)
+                {
+                    Status = ScrapperStatus.Waiting
+                };
                 ListStreams.Add(stream);
-                _ = Task.Run(() => StartStreamScrapperAsync(website, channelPath));
+                Func<Task> func = new(() => StartStreamScrapperAsync(website, channelPath));
+                processesStack.Push(func);
                 return true;
             }
             else
@@ -70,6 +80,64 @@ public class WatcherService : IWatcherService
         catch (Exception e)
         {
             _logger.LogError(e, "Failed to add the streaming");
+            return false;
+        }
+
+    }
+
+    public bool StartStream(string website, string channelPath)
+    {
+        if (!isReady)
+        {
+            return false;
+        }
+
+        try
+        {
+            int index = ListStreams.FindIndex(stream => stream.Website == website && stream.Channel == channelPath);
+            if (index < 0)
+            {
+                Func<Task> func = new(() => StartStreamScrapperAsync(website, channelPath));
+                processesStack.Push(func);
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to start the streaming");
+            return false;
+        }
+
+    }
+
+    public bool StopStream(string website, string channelPath)
+    {
+        if (!isReady)
+        {
+            return false;
+        }
+
+        try
+        {
+            int index = ListStreams.FindIndex(stream => stream.Website == website && stream.Channel == channelPath);
+            if (index < 0)
+            {
+                Func<Task> func = new(() => StopStreamScrapperAsync(website, channelPath));
+                processesStack.Push(func);
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to stop the streaming");
             return false;
         }
 
@@ -91,10 +159,22 @@ public class WatcherService : IWatcherService
             }
             else
             {
-                ListStreams[index].Status = ScrapperStatus.Stopped;
-                ListStreams[index].Scrapper.Stop();
-                ListStreams[index].Dispose();
-                ListStreams.RemoveAt(index);
+                Func<Task> func = new(() => new Task<bool>(bool () =>
+                {
+                    try
+                    {
+                        ListStreams[index].Status = ScrapperStatus.Stopped;
+                        ListStreams[index].Scrapper.Stop();
+                        ListStreams[index].Dispose();
+                        ListStreams.RemoveAt(index);
+                        return true;
+                    }
+                    catch (Exception)
+                    {
+                        return false;
+                    }
+                }));
+                processesStack.Push(func);
                 return true;
             }
         }
@@ -141,9 +221,6 @@ public class WatcherService : IWatcherService
             }
             else
             {
-                ListStreams[index].Status = ScrapperStatus.Running;
-
-
                 if (!ListStreams[index].Scrapper.IsScrapping)
                 {
                     result = await ListStreams[index].Scrapper.RunScrapperAsync(ListStreams[index].Environment, ListStreams[index].Channel, scrapperMode);
@@ -155,7 +232,7 @@ public class WatcherService : IWatcherService
                 else
                 {
                     ListStreams[index].Status = ScrapperStatus.Waiting;
-                    ListStreams[index].WaitTime = DateTime.Now;
+                    ListStreams[index].WaitTimer.Start();
                 }
 
                 return result;
@@ -262,7 +339,17 @@ public class WatcherService : IWatcherService
             {
                 AddStream(str[0], str[1]);
             }
-            Thread.Sleep(1000);
+        }
+    }
+
+    private async Task ProcessStreamStackAsync()
+    {
+        while (!CancellationToken.IsCancellationRequested)
+        {
+            if (processesStack.TryPop(out Func<Task>? func) && func != null)
+            {
+                await Task.Run(func, CancellationToken);
+            }
         }
     }
 
@@ -280,7 +367,7 @@ public class WatcherService : IWatcherService
     public async Task StreamingWatcherAsync(List<string> streams, ScrapperMode mode, CancellationToken token)
     {
         scrapperMode = mode;
-        ct = token;
+        CancellationToken = token;
         isReady = true;
 
         //Load streams with string of "website,channel"
@@ -298,10 +385,10 @@ public class WatcherService : IWatcherService
         timer.AutoReset = true;
         timer.Start();
 
-        int watcherDelay = 60000;
+        int watcherDelay = 1000;
 
         //Check and update
-        while (!ct.IsCancellationRequested)
+        while (!CancellationToken.IsCancellationRequested)
         {
             try
             {
@@ -314,7 +401,7 @@ public class WatcherService : IWatcherService
                     //Debug create new time
                     if (flush)
                     {
-                        await Task.Run(() => debugData["Times"].Add($"{DateTime.Now:dd/MM/yyyy HH:mm:ss}"), CancellationToken.None);                        
+                        await Task.Run(() => debugData["Times"].Add($"{DateTime.Now:dd/MM/yyyy HH:mm:ss}"), CancellationToken.None);
                     }
 
                     foreach (var stream in streamsCopy)
@@ -322,17 +409,26 @@ public class WatcherService : IWatcherService
                         //Execution
                         if (stream.Status == ScrapperStatus.Waiting)
                         {
-                            TimeSpan timeSpan = DateTime.Now - stream.WaitTime;
-                            if (timeSpan.TotalSeconds >= SecondsToWait)
+                            if(stream.WaitTimer.Enabled && stream.WaitTimer.ElapsedOnce)
                             {
-                                _ = Task.Run(() => StartStreamScrapperAsync(stream.Website, stream.Channel));
-                                await Task.Delay(1000, CancellationToken.None);
+                                stream.WaitTimer.Stop();
+                                StartStream(stream.Website, stream.Channel);
                             }
                         }
-                        else if (stream.Status == ScrapperStatus.Running && !stream.Scrapper.IsScrapping)
+                        else if (stream.Status == ScrapperStatus.Running)
                         {
-                            stream.Status = ScrapperStatus.Waiting;
-                            stream.WaitTime = DateTime.Now;
+                            if (!stream.Scrapper.IsScrapping)
+                            {
+                                stream.Status = ScrapperStatus.Waiting;
+                                stream.WaitTimer.Start();
+                            }
+                        }
+                        else if (stream.Status == ScrapperStatus.Stopped)
+                        {
+                            if(stream.WaitTimer.Enabled)
+                            {
+                                stream.WaitTimer.Stop();
+                            }
                         }
 
                         //Debug add status
@@ -385,11 +481,11 @@ public class WatcherService : IWatcherService
                     }
 
                     int delay = watcherDelay - (int)(DateTime.Now - start).TotalMilliseconds;
-                    await Task.Delay(delay, ct);
+                    await Task.Delay(delay, CancellationToken);
                 }
                 else
                 {
-                    await Task.Delay(watcherDelay, ct);
+                    await Task.Delay(watcherDelay, CancellationToken);
                 }
             }
             catch (Exception e)
@@ -399,7 +495,7 @@ public class WatcherService : IWatcherService
         }
 
         isReady = false;
-        
+
         //Salve current streams
         SaveCurrentStreams();
 
@@ -430,28 +526,79 @@ public sealed class Stream : IDisposable
         }
         set
         {
-            ChangeScrapperEvent?.Invoke(value);
             _status = value;
+            ChangeScrapperEvent?.Invoke(value);
         }
     }
-    public DateTime WaitTime { get; set; }
-        
+    public TimerPlus WaitTimer { get; set; }
+
     public delegate void ChangeScrapperStatusEventHandler(ScrapperStatus status);
 
     public static event ChangeScrapperStatusEventHandler? ChangeScrapperEvent;
 
-    public Stream(string website, string channel, EnvironmentModel environment, IServiceProvider provider)
+    public Stream(string website, string channel, EnvironmentModel environment, IServiceProvider provider, int timer)
     {
         Website = website;
         Channel = channel;
         Environment = environment;
         _scope = provider.CreateScope();
         Status = ScrapperStatus.Stopped;
-        WaitTime = new DateTime();
+        WaitTimer = new TimerPlus(timer*1000);
+        WaitTimer.AutoReset = true;
     }
 
     public void Dispose()
     {
         _scope.Dispose();
+    }
+}
+
+public sealed class TimerPlus : System.Timers.Timer, IDisposable
+{
+    private DateTime m_dueTime;
+
+    public bool ElapsedOnce { get; set; }
+    public TimerPlus(int timer) : base(timer) => this.Elapsed += ElapsedAction;
+
+    public new void Dispose()
+    {
+        this.Elapsed -= ElapsedAction;
+        base.Dispose();
+    }
+
+    public double TimeLeft
+    {
+        get
+        {
+            if(this.Enabled)
+            {
+                return (this.m_dueTime - DateTime.Now).TotalMilliseconds;
+            }
+            else
+            {
+                return 0;
+            }
+        }
+    }
+    public new void Start()
+    {
+        this.m_dueTime = DateTime.Now.AddMilliseconds(this.Interval);
+        ElapsedOnce = false;
+        base.Start();
+    }
+
+    public new void Stop()
+    {
+        ElapsedOnce = false;
+        base.Stop();
+    }
+
+    private void ElapsedAction(object? sender, System.Timers.ElapsedEventArgs e)
+    {
+        if (this.AutoReset)
+        {
+            ElapsedOnce = true;
+            this.m_dueTime = DateTime.Now.AddMilliseconds(this.Interval);
+        }
     }
 }
