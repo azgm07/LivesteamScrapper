@@ -97,8 +97,11 @@ public sealed class BrowserService : IBrowserService
         options.AddUserProfilePreference("profile.default_content_setting_values.app_banner", 2);
         options.AddUserProfilePreference("profile.default_content_setting_values.site_engagement", 2);
         options.AddUserProfilePreference("profile.default_content_setting_values.durable_storage", 2);
-        
-        Browser = new ChromeDriver(options);
+
+        var driverService = ChromeDriverService.CreateDefaultService();
+        driverService.HideCommandPromptWindow = true;
+
+        Browser = new ChromeDriver(driverService, options);
     }
 
     public IWebElement WaitUntilElementExists(By elementLocator, int timeout = 10)
