@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Scrapper\Scrapper.csproj" />
+    <ProjectReference Include="..\ScrapperLibrary\ScrapperLibrary.csproj" />
   </ItemGroup>
 
 </Project>

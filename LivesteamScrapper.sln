@@ -13,7 +13,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ScrapperCoreWebApp", "Scrap
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ScrapperBlazorLibrary", "ScrapperBlazorLibrary\ScrapperBlazorLibrary.csproj", "{D3ADAD54-EA51-4E22-AD78-DBCAF1EE2DA0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScrapperWpfApp", "ScrapperWpfApp\ScrapperWpfApp.csproj", "{34A8D138-C2DF-4B30-A3E9-F4E1BE205F27}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ScrapperWpfApp", "ScrapperWpfApp\ScrapperWpfApp.csproj", "{34A8D138-C2DF-4B30-A3E9-F4E1BE205F27}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScrapperLibrary", "ScrapperLibrary\ScrapperLibrary.csproj", "{622855FB-ADC7-40D9-AA31-34BF12CE92F1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -45,6 +47,10 @@ Global
 		{34A8D138-C2DF-4B30-A3E9-F4E1BE205F27}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{34A8D138-C2DF-4B30-A3E9-F4E1BE205F27}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{34A8D138-C2DF-4B30-A3E9-F4E1BE205F27}.Release|Any CPU.Build.0 = Release|Any CPU
+		{622855FB-ADC7-40D9-AA31-34BF12CE92F1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{622855FB-ADC7-40D9-AA31-34BF12CE92F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{622855FB-ADC7-40D9-AA31-34BF12CE92F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{622855FB-ADC7-40D9-AA31-34BF12CE92F1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

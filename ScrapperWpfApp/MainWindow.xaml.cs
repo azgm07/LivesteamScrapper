@@ -30,37 +30,33 @@ namespace ScrapperWpfApp
         private CancellationTokenSource cts;
         private readonly IWatcherService _watcherService;
         private readonly IFileService _fileService;
+        private readonly List<Task> _windowTasks;
 
         public MainWindow(IWatcherService watcherService, IFileService fileService)
         {
             cts = new();
+            _windowTasks = new();
             _watcherService = watcherService;
             _fileService = fileService;
 
             Resources.Add("serviceCollection", App.ServiceProvider);
 
-            try
-            {
-                List<string> lines = _fileService.ReadCsv("files/config", "streams.txt");
+            List<string> lines = _fileService.ReadCsv("files/config", "streams.txt");
 
-                if (!lines.Any())
-                {
-                    //Not Implemented
-                }
-                _watcherService.StreamingWatcherAsync(lines, EnumsModel.ScrapperMode.Delayed, cts.Token);
-                
-                InitializeComponent();
-            }
-            catch (Exception)
+            if (!lines.Any())
             {
                 //Not Implemented
-                _ = "";
             }
+            _windowTasks.Add(_watcherService.StreamingWatcherAsync(lines, EnumsModel.ScrapperMode.Delayed, cts.Token));
+
+            InitializeComponent();
         }
 
-        private void MainWindow_Closing(object sender, CancelEventArgs e)
+        private async void MainWindow_Closing(object sender, CancelEventArgs e)
         {
             cts.Cancel();
+            await Task.WhenAll(_windowTasks);
+            _ = "Finished";
         }
 
     }

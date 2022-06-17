@@ -15,8 +15,17 @@ namespace ScrapperWpfApp
     {
         public static IServiceProvider? ServiceProvider { get; private set; }
         public static IConfiguration? Configuration { get; private set; }
+        private static readonly CancellationTokenSource _mainCTS = new();
 
-        private void Application_Startup(object sender, StartupEventArgs e)
+        public static CancellationToken MainCancellationToken 
+        { 
+            get 
+            {
+                return _mainCTS.Token;
+            }
+        }
+
+        private void AppStartup(object sender, StartupEventArgs e)
         {
             AppDomain.CurrentDomain.UnhandledException += (sender, error) =>
             {
@@ -46,6 +55,16 @@ namespace ScrapperWpfApp
             services.AddScoped<ITimeService, TimeService>();
             services.AddWpfBlazorWebView();
             services.AddTransient(typeof(MainWindow));
+        }
+
+        private void AppExit(object sender, ExitEventArgs e)
+        {
+            AppDomain.CurrentDomain.UnhandledException += (sender, error) =>
+            {
+                MessageBox.Show(error.ExceptionObject.ToString(), "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            };
+
+            _mainCTS.Cancel();
         }
     }
 }

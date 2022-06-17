@@ -24,6 +24,8 @@ else
                 <th>Website</th>
                 <th>Channel</th>
                 <th>Status</th>
+                <th>Current Game</th>
+                <th>Viewers</th>
             </tr>
         </thead>
         <tbody>
@@ -35,11 +37,28 @@ else
                     <td>@stream.Channel</td>
                     @if (stream.Status == EnumsModel.ScrapperStatus.Waiting)
                     {
-                        <td>@stream.Status (@TimeSpan.FromMilliseconds(stream.WaitTimer.TimeLeft).ToString(@"hh\:mm\:ss"))</td>
+                        if (stream.WaitTimer.TimeLeft <= 0 || !stream.WaitTimer.ElapsedOnce)
+                        {
+                            <td>Starting...</td>
+                        }
+                        else
+                        {
+                            <td>@stream.Status (@TimeSpan.FromMilliseconds(stream.WaitTimer.TimeLeft).ToString(@"hh\:mm\:ss"))</td>
+                        }
+                        <td></td>
+                        <td></td>
+                    }
+                    else if(stream.Status == EnumsModel.ScrapperStatus.Running)
+                    {
+                        <td>@stream.Status</td>
+                        <td>@stream.Scrapper.CurrentGame</td>
+                        <td>@stream.Scrapper.ViewersCount</td>
                     }
                     else
                     {
                         <td>@stream.Status</td>
+                        <td></td>
+                        <td></td>
                     }
                 </tr>
             }

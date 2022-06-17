@@ -1,8 +1,9 @@
 ﻿<Application x:Class="ScrapperWpfApp.App"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:ScrapperWpfApp"
-             Startup="Application_Startup">
+            xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            xmlns:local="clr-namespace:ScrapperWpfApp"
+            Startup="AppStartup"
+            Exit="AppExit">
     <Application.Resources>
 
     </Application.Resources>
