@@ -369,12 +369,20 @@ public class WatcherService : IWatcherService
 
     private async Task ProcessStreamStackAsync()
     {
+        await Task.Delay(10000, CancellationToken);
         while (!CancellationToken.IsCancellationRequested)
         {
-            if (processQueue.TryDequeue(out Func<Task>? func) && func != null)
+            List<Task> tasks = new List<Task>();
+
+            for (int i = 0; i < 5; i++)
             {
-                await Task.Run(func, CancellationToken);
+                if (processQueue.TryDequeue(out Func<Task>? func) && func != null)
+                {
+                    tasks.Add(Task.Run(func, CancellationToken));
+                }
             }
+
+            await Task.WhenAll(tasks);
         }
     }
 
@@ -436,7 +444,7 @@ public class WatcherService : IWatcherService
                         {
                             if (stream.WaitTimer.Enabled && stream.WaitTimer.ElapsedOnce)
                             {
-                                stream.WaitTimer.Stop();
+                                stream.WaitTimer.Start();
                                 StartStream(stream.Website, stream.Channel);
                             }
                         }
@@ -448,12 +456,9 @@ public class WatcherService : IWatcherService
                                 stream.WaitTimer.Start();
                             }
                         }
-                        else if (stream.Status == ScrapperStatus.Stopped)
+                        else if (stream.Status == ScrapperStatus.Stopped && stream.WaitTimer.Enabled)
                         {
-                            if (stream.WaitTimer.Enabled)
-                            {
-                                stream.WaitTimer.Stop();
-                            }
+                            stream.WaitTimer.Stop();
                         }
 
                         //Debug add status

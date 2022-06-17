@@ -27,16 +27,16 @@ namespace ScrapperWpfApp
     /// </summary>
     public partial class MainWindow : Window
     {
-        private CancellationTokenSource cts;
-        private readonly IWatcherService _watcherService;
+        private readonly HostService _hostService;
         private readonly IFileService _fileService;
         private readonly List<Task> _windowTasks;
+        private readonly CancellationTokenSource cts;
 
-        public MainWindow(IWatcherService watcherService, IFileService fileService)
+        public MainWindow(HostService hostService, IFileService fileService)
         {
             cts = new();
             _windowTasks = new();
-            _watcherService = watcherService;
+            _hostService = hostService;
             _fileService = fileService;
 
             Resources.Add("serviceCollection", App.ServiceProvider);
@@ -47,16 +47,14 @@ namespace ScrapperWpfApp
             {
                 //Not Implemented
             }
-            _windowTasks.Add(_watcherService.StreamingWatcherAsync(lines, EnumsModel.ScrapperMode.Delayed, cts.Token));
+            _hostService.StartAsync(cts.Token);
 
             InitializeComponent();
         }
 
         private async void MainWindow_Closing(object sender, CancelEventArgs e)
         {
-            cts.Cancel();
-            await Task.WhenAll(_windowTasks);
-            _ = "Finished";
+            await _hostService.StopAsync(cts.Token);
         }
 
     }

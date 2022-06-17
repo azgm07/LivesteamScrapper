@@ -73,7 +73,7 @@ public class ScrapperInfoService : IScrapperInfoService
         IsScrapping = false;
         MaxFails = 3;
         mainTasks = new();
-        DelayInSeconds = 300;
+        DelayInSeconds = 60;
     }
 
     private void StartScrapperBrowser()
