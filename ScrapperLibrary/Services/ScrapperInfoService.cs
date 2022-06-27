@@ -12,6 +12,7 @@ namespace Scrapper.Services;
 
 public interface IScrapperInfoService
 {
+    CancellationTokenSource Cts { get; }
     string CurrentGame { get; }
     bool IsScrapping { get; }
     string Livestream { get; }
@@ -21,8 +22,8 @@ public interface IScrapperInfoService
     int DelayInSeconds { get; }
     ScrapperMode Mode { get; }
 
-    Task RunTestAsync(EnvironmentModel environment, string livestream, int minutes, CancellationToken token);
-    Task<bool> RunScrapperAsync(EnvironmentModel environment, string livestream, CancellationToken token, ScrapperMode mode = ScrapperMode.Delayed);
+    Task RunTestAsync(EnvironmentModel environment, string livestream, int minutes);
+    Task<bool> RunScrapperAsync(EnvironmentModel environment, string livestream, ScrapperMode mode = ScrapperMode.Delayed);
     void Stop();
 }
 
@@ -33,6 +34,7 @@ public class ScrapperInfoService : IScrapperInfoService
     public bool IsScrapping { get; private set; }
     public EnvironmentModel Environment { get; private set; }
     public int MaxFails { get; private set; }
+    public CancellationTokenSource Cts { get; private set; }
     public int DelayInSeconds { get; set; }
     public ScrapperMode Mode { get; private set; }
 
@@ -44,8 +46,6 @@ public class ScrapperInfoService : IScrapperInfoService
     private System.Timers.Timer timerTask;
     private bool isReloading;
     private int timeoutRestart;
-    private readonly BlockingCollection<Task> mainTasks;
-    private CancellationToken cancellationToken;
 
     public string Website { get; private set; }
     public string Livestream { get; private set; }
@@ -66,11 +66,11 @@ public class ScrapperInfoService : IScrapperInfoService
         _time = time;
         _file = file;
         timerTask = new();
+        Cts = new();
         isReloading = false;
         timeoutRestart = 0;
         IsScrapping = false;
         MaxFails = 3;
-        mainTasks = new();
         DelayInSeconds = 60;
     }
 
@@ -169,32 +169,29 @@ public class ScrapperInfoService : IScrapperInfoService
         _logger.LogInformation("Console Stopped for {website}/{livestream}", Website, Livestream);
     }
 
-    public async Task RunTestAsync(EnvironmentModel environment, string livestream, int minutes, CancellationToken token)
+    public async Task RunTestAsync(EnvironmentModel environment, string livestream, int minutes)
     {
         Environment = environment;
         Website = Environment.Website;
         Livestream = livestream;
-        bool hasStarted = await Task.Run(() => Start(token));
+        bool hasStarted = await Task.Run(() => Start());
         if (hasStarted)
         {
             StartTimerTasksCancellation(minutes);
 
-            List<Task> tasks = new();
-            tasks.Add(RunDelayedAsync(cancellationToken));
-
-            //Console Tasks
-            tasks.Add(CreateInfoLogAsync(cancellationToken, 30));
-
-            foreach (var item in tasks)
+            List<Task> tasks = new()
             {
-                mainTasks.Add(item);
-            }
+                RunDelayedAsync(Cts.Token),
+
+                //Console Tasks
+                CreateInfoLogAsync(Cts.Token, 30)
+            };
 
             await Task.WhenAll(tasks);
         }
 
     }
-    public async Task<bool> RunScrapperAsync(EnvironmentModel environment, string livestream, CancellationToken token, ScrapperMode mode = ScrapperMode.Delayed)
+    public async Task<bool> RunScrapperAsync(EnvironmentModel environment, string livestream, ScrapperMode mode = ScrapperMode.Delayed)
     {
         if (!IsScrapping)
         {
@@ -203,7 +200,7 @@ public class ScrapperInfoService : IScrapperInfoService
             Website = Environment.Website;
             Livestream = livestream;
 
-            bool hasStarted = await Task.Run(() => Start(token));
+            bool hasStarted = await Task.Run(() => Start());
 
             if (hasStarted)
             {
@@ -211,27 +208,18 @@ public class ScrapperInfoService : IScrapperInfoService
                 switch (mode)
                 {
                     case ScrapperMode.Delayed:
-                        tasks.Add(RunDelayedAsync(cancellationToken));
+                        tasks.Add(RunDelayedAsync(Cts.Token));
                         break;
                     case ScrapperMode.Precise:
-                        tasks.Add(RunPreciseAsync(cancellationToken));
+                        tasks.Add(RunPreciseAsync(Cts.Token));
                         break;
                     default:
                         break;
                 }
 
                 //Console Tasks
-                tasks.Add(CreateInfoLogAsync(cancellationToken, 30));
+                tasks.Add(CreateInfoLogAsync(Cts.Token, 30));
 
-                foreach (var item in tasks)
-                {
-                    mainTasks.Add(item);
-                }
-
-                _ = Task.WhenAll(tasks).ContinueWith((task) =>
-                {
-                    Stop();
-                }, TaskScheduler.Default);
                 return true;
             }
             else
@@ -246,9 +234,9 @@ public class ScrapperInfoService : IScrapperInfoService
         }
     }
 
-    private bool Start(CancellationToken token)
+    private bool Start()
     {
-        cancellationToken = token;
+        Cts = new CancellationTokenSource();
         bool isOpen = OpenScrapper();
 
         if (isOpen)
@@ -273,16 +261,12 @@ public class ScrapperInfoService : IScrapperInfoService
 
     public void Stop()
     {
+        Cts.Cancel();
         IsScrapping = false;
 
         if (_browser != null)
         {
             _browser.StopBrowserPage();
-        }
-
-        for (int i = 0; i < mainTasks.Count; i++)
-        {
-            _ = mainTasks.Take();
         }
 
         if (IsScrapping)
@@ -419,8 +403,10 @@ public class ScrapperInfoService : IScrapperInfoService
             Task task = Task.Run(() =>
             {
                 string max = string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", currentGame, ",", listCounter.Max().ToString());
-                List<string> newList = new();
-                newList.Add(max);
+                List<string> newList = new()
+                {
+                    max
+                };
                 WriteData(newList, Environment.Website, Livestream, "counters");
                 listCounter = new List<int>();
             }, CancellationToken.None);
@@ -465,8 +451,10 @@ public class ScrapperInfoService : IScrapperInfoService
             await Task.Run(() =>
             {
                 string max = string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", currentGame, ",", listCounter.Max().ToString());
-                List<string> newList = new();
-                newList.Add(max);
+                List<string> newList = new()
+                {
+                    max
+                };
                 WriteData(newList, Environment.Website, Livestream, "counters");
             }, CancellationToken.None);
         }
@@ -534,8 +522,10 @@ public class ScrapperInfoService : IScrapperInfoService
                 Task task = Task.Run(() =>
                 {
                     string max = string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", currentGame, ",", listCounter.Max().ToString());
-                    List<string> newList = new();
-                    newList.Add(max);
+                    List<string> newList = new()
+                    {
+                        max
+                    };
                     WriteData(newList, Environment.Website, Livestream, "counters");
                     listCounter = new List<int>();
                 }, CancellationToken.None);
@@ -600,8 +590,10 @@ public class ScrapperInfoService : IScrapperInfoService
             await Task.Run(() =>
             {
                 string max = string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", currentGame, ",", listCounter.Max().ToString());
-                List<string> newList = new();
-                newList.Add(max);
+                List<string> newList = new()
+                {
+                    max
+                };
                 WriteData(newList, Environment.Website, Livestream, "counters");
             }, CancellationToken.None);
         }

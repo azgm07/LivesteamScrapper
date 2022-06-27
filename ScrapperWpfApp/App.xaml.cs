@@ -47,7 +47,7 @@ namespace ScrapperWpfApp
 
         private static void ConfigureServices(IServiceCollection services)
         {
-            services.AddSingleton<HostService, HostService>();
+            services.AddHostedService<HostService>();
             services.AddSingleton<IFileService, FileService>();
             services.AddSingleton<IWatcherService, WatcherService>();
             services.AddScoped<IBrowserService, BrowserService>();

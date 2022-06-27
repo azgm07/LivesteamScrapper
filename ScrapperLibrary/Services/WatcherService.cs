@@ -30,15 +30,15 @@ public class WatcherService : IWatcherService
     public CancellationToken CancellationToken { get; private set; }
     private ScrapperMode scrapperMode;
     private readonly ILogger<WatcherService> _logger;
-    private readonly IServiceProvider _provider;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly IFileService _file;
     private bool isReady;
     private readonly ConcurrentQueue<Func<Task>> processQueue;
 
-    public WatcherService(IServiceProvider provider, ILogger<WatcherService> logger, IFileService file, int secondsToWait = 300)
+    public WatcherService(IServiceScopeFactory scopeFactory, ILogger<WatcherService> logger, IFileService file, int secondsToWait = 300)
     {
         _logger = logger;
-        _provider = provider;
+        _scopeFactory = scopeFactory;
         _file = file;
         CancellationToken = new();
         scrapperMode = ScrapperMode.Delayed;
@@ -63,7 +63,7 @@ public class WatcherService : IWatcherService
             if (index < 0)
             {
                 EnvironmentModel environment = EnvironmentModel.GetEnvironment(website);
-                Stream stream = new(website, channelPath, environment, _provider, SecondsToWait)
+                Stream stream = new(website, channelPath, environment, _scopeFactory, SecondsToWait)
                 {
                     Status = ScrapperStatus.Waiting
                 };
@@ -159,8 +159,10 @@ public class WatcherService : IWatcherService
                     try
                     {
                         ListStreams[index].Status = ScrapperStatus.Stopped;
-                        ListStreams[index].Scrapper.Stop();
-                        ListStreams[index].Dispose();
+                        if(ListStreams[index].Scrapper != null)
+                        {
+                            ListStreams[index].Scrapper.Stop();
+                        }
                         ListStreams.RemoveAt(index);
                         return true;
                     }
@@ -216,9 +218,9 @@ public class WatcherService : IWatcherService
             }
             else
             {
-                if (!ListStreams[index].Scrapper.IsScrapping)
+                if (ListStreams[index].Scrapper != null && !ListStreams[index].Scrapper.IsScrapping)
                 {
-                    result = await ListStreams[index].Scrapper.RunScrapperAsync(ListStreams[index].Environment, ListStreams[index].Channel, CancellationToken, scrapperMode);
+                    result = await ListStreams[index].Scrapper.RunScrapperAsync(ListStreams[index].Environment, ListStreams[index].Channel, scrapperMode);
                 }
                 if (result)
                 {
@@ -252,7 +254,7 @@ public class WatcherService : IWatcherService
             else
             {
                 ListStreams[index].Status = ScrapperStatus.Stopped;
-                if (ListStreams[index].Scrapper.IsScrapping)
+                if(ListStreams[index].Scrapper != null)
                 {
                     await Task.Run(() => ListStreams[index].Scrapper.Stop());
                 }
@@ -278,7 +280,7 @@ public class WatcherService : IWatcherService
             List<Action> actions = new();
             foreach (var stream in ListStreams)
             {
-                if (!stream.Scrapper.IsScrapping)
+                if (stream.Scrapper != null && !stream.Scrapper.IsScrapping)
                 {
                     actions.Add(() =>
                     {
@@ -355,9 +357,9 @@ public class WatcherService : IWatcherService
     private async Task ProcessStreamStackAsync()
     {
         await Task.Delay(10000, CancellationToken);
-        while (!CancellationToken.IsCancellationRequested)
+        while (true)
         {
-            List<Task> tasks = new List<Task>();
+            List<Task> tasks = new();
 
             for (int i = 0; i < 5; i++)
             {
@@ -368,6 +370,11 @@ public class WatcherService : IWatcherService
             }
 
             await Task.WhenAll(tasks);
+
+            if(CancellationToken.IsCancellationRequested && processQueue.IsEmpty)
+            {
+                break;
+            }
         }
     }
 
@@ -395,8 +402,10 @@ public class WatcherService : IWatcherService
             await Task.Delay(5000, CancellationToken);
 
             //Setup Debugger
-            Dictionary<string, List<string>> debugData = new();
-            debugData.Add($"Times", new List<string>());
+            Dictionary<string, List<string>> debugData = new()
+            {
+                { $"Times", new List<string>() }
+            };
 
             bool flush = false;
 
@@ -435,7 +444,7 @@ public class WatcherService : IWatcherService
                         }
                         else if (stream.Status == ScrapperStatus.Running)
                         {
-                            if (!stream.Scrapper.IsScrapping)
+                            if (stream.Scrapper != null && !stream.Scrapper.IsScrapping)
                             {
                                 stream.Status = ScrapperStatus.Waiting;
                                 stream.WaitTimer.Start();
@@ -476,8 +485,10 @@ public class WatcherService : IWatcherService
                             try
                             {
                                 Dictionary<string, List<string>> debugCopy = new(debugData);
-                                List<string> lines = new();
-                                lines.Add($"Streams,{string.Join(",", debugCopy["Times"])}");
+                                List<string> lines = new()
+                                {
+                                    $"Streams,{string.Join(",", debugCopy["Times"])}"
+                                };
                                 foreach (string item in debugCopy.Keys)
                                 {
                                     if (item != "Times")
@@ -521,7 +532,7 @@ public class WatcherService : IWatcherService
     }
 }
 
-public sealed class Stream : IDisposable
+public sealed class Stream
 {
     public string Website { get; set; }
     public string Channel { get; set; }
@@ -531,7 +542,9 @@ public sealed class Stream : IDisposable
     {
         get
         {
-            return (IScrapperInfoService)_scope.ServiceProvider.GetRequiredService(typeof(IScrapperInfoService));
+            IScrapperInfoService service = (IScrapperInfoService)_scope.ServiceProvider.GetRequiredService(typeof(IScrapperInfoService));
+            return service;
+
         }
     }
     private ScrapperStatus _status;
@@ -553,20 +566,17 @@ public sealed class Stream : IDisposable
 
     public static event ChangeScrapperStatusEventHandler? ChangeScrapperEvent;
 
-    public Stream(string website, string channel, EnvironmentModel environment, IServiceProvider provider, int timer)
+    public Stream(string website, string channel, EnvironmentModel environment, IServiceScopeFactory scopeService, int timer)
     {
         Website = website;
         Channel = channel;
         Environment = environment;
-        _scope = provider.CreateScope();
+        _scope = scopeService.CreateScope();
         Status = ScrapperStatus.Stopped;
-        WaitTimer = new(timer * 1000);
-        WaitTimer.AutoReset = true;
-    }
-
-    public void Dispose()
-    {
-        _scope.Dispose();
+        WaitTimer = new(timer * 1000)
+        {
+            AutoReset = true
+        };
     }
 }
 

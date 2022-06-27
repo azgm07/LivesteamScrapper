@@ -200,7 +200,7 @@ public sealed class BrowserService : IBrowserService
     {
         if (Browser != null)
         {
-            Browser.Dispose();
+            Browser.Quit();
             Browser = null;
         }
     }
