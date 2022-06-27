@@ -29,13 +29,11 @@ namespace ScrapperWpfApp
     {
         private readonly HostService _hostService;
         private readonly IFileService _fileService;
-        private readonly List<Task> _windowTasks;
         private readonly CancellationTokenSource cts;
 
         public MainWindow(HostService hostService, IFileService fileService)
         {
             cts = new();
-            _windowTasks = new();
             _hostService = hostService;
             _fileService = fileService;
 

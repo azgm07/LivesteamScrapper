@@ -12,7 +12,6 @@ namespace Scrapper.Services;
 
 public interface IScrapperInfoService
 {
-    CancellationTokenSource Cts { get; }
     string CurrentGame { get; }
     bool IsScrapping { get; }
     string Livestream { get; }
@@ -22,8 +21,8 @@ public interface IScrapperInfoService
     int DelayInSeconds { get; }
     ScrapperMode Mode { get; }
 
-    Task RunTestAsync(EnvironmentModel environment, string livestream, int minutes);
-    Task<bool> RunScrapperAsync(EnvironmentModel environment, string livestream, ScrapperMode mode = ScrapperMode.Delayed);
+    Task RunTestAsync(EnvironmentModel environment, string livestream, int minutes, CancellationToken token);
+    Task<bool> RunScrapperAsync(EnvironmentModel environment, string livestream, CancellationToken token, ScrapperMode mode = ScrapperMode.Delayed);
     void Stop();
 }
 
@@ -34,7 +33,6 @@ public class ScrapperInfoService : IScrapperInfoService
     public bool IsScrapping { get; private set; }
     public EnvironmentModel Environment { get; private set; }
     public int MaxFails { get; private set; }
-    public CancellationTokenSource Cts { get; private set; }
     public int DelayInSeconds { get; set; }
     public ScrapperMode Mode { get; private set; }
 
@@ -47,6 +45,7 @@ public class ScrapperInfoService : IScrapperInfoService
     private bool isReloading;
     private int timeoutRestart;
     private readonly BlockingCollection<Task> mainTasks;
+    private CancellationToken cancellationToken;
 
     public string Website { get; private set; }
     public string Livestream { get; private set; }
@@ -67,7 +66,6 @@ public class ScrapperInfoService : IScrapperInfoService
         _time = time;
         _file = file;
         timerTask = new();
-        Cts = new();
         isReloading = false;
         timeoutRestart = 0;
         IsScrapping = false;
@@ -171,21 +169,21 @@ public class ScrapperInfoService : IScrapperInfoService
         _logger.LogInformation("Console Stopped for {website}/{livestream}", Website, Livestream);
     }
 
-    public async Task RunTestAsync(EnvironmentModel environment, string livestream, int minutes)
+    public async Task RunTestAsync(EnvironmentModel environment, string livestream, int minutes, CancellationToken token)
     {
         Environment = environment;
         Website = Environment.Website;
         Livestream = livestream;
-        bool hasStarted = await Task.Run(() => Start());
+        bool hasStarted = await Task.Run(() => Start(token));
         if (hasStarted)
         {
             StartTimerTasksCancellation(minutes);
 
             List<Task> tasks = new();
-            tasks.Add(RunDelayedAsync(Cts.Token));
+            tasks.Add(RunDelayedAsync(cancellationToken));
 
             //Console Tasks
-            tasks.Add(CreateInfoLogAsync(Cts.Token, 30));
+            tasks.Add(CreateInfoLogAsync(cancellationToken, 30));
 
             foreach (var item in tasks)
             {
@@ -196,7 +194,7 @@ public class ScrapperInfoService : IScrapperInfoService
         }
 
     }
-    public async Task<bool> RunScrapperAsync(EnvironmentModel environment, string livestream, ScrapperMode mode = ScrapperMode.Delayed)
+    public async Task<bool> RunScrapperAsync(EnvironmentModel environment, string livestream, CancellationToken token, ScrapperMode mode = ScrapperMode.Delayed)
     {
         if (!IsScrapping)
         {
@@ -205,7 +203,7 @@ public class ScrapperInfoService : IScrapperInfoService
             Website = Environment.Website;
             Livestream = livestream;
 
-            bool hasStarted = await Task.Run(() => Start());
+            bool hasStarted = await Task.Run(() => Start(token));
 
             if (hasStarted)
             {
@@ -213,17 +211,17 @@ public class ScrapperInfoService : IScrapperInfoService
                 switch (mode)
                 {
                     case ScrapperMode.Delayed:
-                        tasks.Add(RunDelayedAsync(Cts.Token));
+                        tasks.Add(RunDelayedAsync(cancellationToken));
                         break;
                     case ScrapperMode.Precise:
-                        tasks.Add(RunPreciseAsync(Cts.Token));
+                        tasks.Add(RunPreciseAsync(cancellationToken));
                         break;
                     default:
                         break;
                 }
 
                 //Console Tasks
-                tasks.Add(CreateInfoLogAsync(Cts.Token, 30));
+                tasks.Add(CreateInfoLogAsync(cancellationToken, 30));
 
                 foreach (var item in tasks)
                 {
@@ -248,9 +246,9 @@ public class ScrapperInfoService : IScrapperInfoService
         }
     }
 
-    private bool Start()
+    private bool Start(CancellationToken token)
     {
-        Cts = new CancellationTokenSource();
+        cancellationToken = token;
         bool isOpen = OpenScrapper();
 
         if (isOpen)
@@ -275,7 +273,6 @@ public class ScrapperInfoService : IScrapperInfoService
 
     public void Stop()
     {
-        Cts.Cancel();
         IsScrapping = false;
 
         if (_browser != null)

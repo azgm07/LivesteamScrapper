@@ -4,12 +4,11 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Scrapper.Models;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Mvc;
 using System.Threading;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.Hosting;
 
 namespace ScrapperUnitTests
 {
@@ -21,17 +20,22 @@ namespace ScrapperUnitTests
         {
             bool result = true;
 
-            //Build
-            var builder = WebApplication.CreateBuilder();
-            builder.Logging.ClearProviders();
-            builder.Logging.AddConsole();
+            var builder = Host.CreateDefaultBuilder();
+            builder.ConfigureServices(services =>
+            {
+                services.AddHostedService<HostService>();
+                services.AddSingleton<IFileService, FileService>();
+                services.AddSingleton<IWatcherService, WatcherService>();
+                services.AddScoped<IBrowserService, BrowserService>();
+                services.AddScoped<IScrapperInfoService, ScrapperInfoService>();
+                services.AddScoped<ITimeService, TimeService>();
+            });
 
-            // Add services
-            builder.Services.AddScoped<IBrowserService, BrowserService>();
-            builder.Services.AddSingleton<IFileService, FileService>();
-            builder.Services.AddScoped<IScrapperInfoService, ScrapperInfoService>();
-            builder.Services.AddScoped<ITimeService, TimeService>();
-            builder.Services.AddSingleton<IWatcherService, WatcherService>();
+            builder.ConfigureLogging(logging =>
+            {
+                logging.ClearProviders();
+                logging.AddConsole();
+            });
 
             var app = builder.Build();
 
@@ -58,16 +62,22 @@ namespace ScrapperUnitTests
             bool result = true;
 
             //Build
-            var builder = WebApplication.CreateBuilder();
-            builder.Logging.ClearProviders();
-            builder.Logging.AddConsole();
+            var builder = Host.CreateDefaultBuilder();
+            builder.ConfigureServices(services =>
+            {
+                services.AddHostedService<HostService>();
+                services.AddSingleton<IFileService, FileService>();
+                services.AddSingleton<IWatcherService, WatcherService>();
+                services.AddScoped<IBrowserService, BrowserService>();
+                services.AddScoped<IScrapperInfoService, ScrapperInfoService>();
+                services.AddScoped<ITimeService, TimeService>();
+            });
 
-            // Add services
-            builder.Services.AddScoped<IBrowserService, BrowserService>();
-            builder.Services.AddSingleton<IFileService, FileService>();
-            builder.Services.AddScoped<IScrapperInfoService, ScrapperInfoService>();
-            builder.Services.AddScoped<ITimeService, TimeService>();
-            builder.Services.AddSingleton<IWatcherService, WatcherService>();
+            builder.ConfigureLogging(logging =>
+            {
+                logging.ClearProviders();
+                logging.AddConsole();
+            });
 
             var app = builder.Build();
 
