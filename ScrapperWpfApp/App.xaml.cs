@@ -4,6 +4,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Scrapper.Services;
 using System;
 using System.Threading;
@@ -13,58 +14,72 @@ namespace ScrapperWpfApp
 {
     public partial class App : Application
     {
+        private readonly IHost _host;
         public static IServiceProvider? ServiceProvider { get; private set; }
-        public static IConfiguration? Configuration { get; private set; }
-        private static readonly CancellationTokenSource _mainCTS = new();
 
-        public static CancellationToken MainCancellationToken 
-        { 
-            get 
+        public App()
+        {
+            var builder = Host.CreateDefaultBuilder();
+            builder.ConfigureServices(services =>
             {
-                return _mainCTS.Token;
+                services.AddHostedService<HostService>();
+                services.AddSingleton<IFileService, FileService>();
+                services.AddSingleton<IWatcherService, WatcherService>();
+                services.AddScoped<IBrowserService, BrowserService>();
+                services.AddScoped<IScrapperInfoService, ScrapperInfoService>();
+                services.AddScoped<ITimeService, TimeService>();
+                services.AddWpfBlazorWebView();
+                services.AddSingleton(typeof(MainWindow));
+
+                services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(60));
+            });
+
+            builder.ConfigureLogging(logging =>
+            {
+                logging.ClearProviders();
+                logging.AddConsole();
+            });
+
+            builder.UseConsoleLifetime();
+
+            _host = builder.Build();
+
+            ServiceProvider = _host.Services;
+        }
+
+        private async void AppStartup(object sender, StartupEventArgs e)
+        {
+            AppDomain.CurrentDomain.UnhandledException += (sender, error) =>
+            {
+                MessageBox.Show(error.ExceptionObject.ToString(), "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            };
+
+            if (ServiceProvider != null)
+            {
+                var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
+                mainWindow.Show();
+            }
+
+            try
+            {
+                await _host.RunAsync();
+            }
+            catch (OperationCanceledException)
+            {
+                // suppress
             }
         }
 
-        private void AppStartup(object sender, StartupEventArgs e)
+        private async void AppExit(object sender, ExitEventArgs e)
         {
             AppDomain.CurrentDomain.UnhandledException += (sender, error) =>
             {
                 MessageBox.Show(error.ExceptionObject.ToString(), "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             };
-
-            var builder = new ConfigurationBuilder();
-
-            Configuration = builder.Build();
-
-            var serviceCollection = new ServiceCollection();
-            ConfigureServices(serviceCollection);
-
-            ServiceProvider = serviceCollection.BuildServiceProvider();
-
-            var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
-            mainWindow.Show();
-        }
-
-        private static void ConfigureServices(IServiceCollection services)
-        {
-            services.AddHostedService<HostService>();
-            services.AddSingleton<IFileService, FileService>();
-            services.AddSingleton<IWatcherService, WatcherService>();
-            services.AddScoped<IBrowserService, BrowserService>();
-            services.AddScoped<IScrapperInfoService, ScrapperInfoService>();
-            services.AddScoped<ITimeService, TimeService>();
-            services.AddWpfBlazorWebView();
-            services.AddTransient(typeof(MainWindow));
-        }
-
-        private void AppExit(object sender, ExitEventArgs e)
-        {
-            AppDomain.CurrentDomain.UnhandledException += (sender, error) =>
+            using (_host)
             {
-                MessageBox.Show(error.ExceptionObject.ToString(), "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            };
-
-            _mainCTS.Cancel();
+                await _host.StopAsync();
+            }
         }
     }
 }

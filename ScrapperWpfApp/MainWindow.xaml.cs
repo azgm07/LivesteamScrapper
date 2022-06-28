@@ -27,14 +27,12 @@ namespace ScrapperWpfApp
     /// </summary>
     public partial class MainWindow : Window
     {
-        private readonly HostService _hostService;
         private readonly IFileService _fileService;
         private readonly CancellationTokenSource cts;
 
-        public MainWindow(HostService hostService, IFileService fileService)
+        public MainWindow(IFileService fileService)
         {
             cts = new();
-            _hostService = hostService;
             _fileService = fileService;
 
             Resources.Add("serviceCollection", App.ServiceProvider);
@@ -45,15 +43,8 @@ namespace ScrapperWpfApp
             {
                 //Not Implemented
             }
-            _hostService.StartAsync(cts.Token);
 
             InitializeComponent();
         }
-
-        private async void MainWindow_Closing(object sender, CancelEventArgs e)
-        {
-            await _hostService.StopAsync(cts.Token);
-        }
-
     }
 }

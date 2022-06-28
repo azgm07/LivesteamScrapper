@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,8 +10,14 @@ namespace Scrapper.Services
 {
     public abstract class BackgroundService : IHostedService, IDisposable
     {
-        private Task _executingTask = Task.CompletedTask;
-        private readonly CancellationTokenSource _stoppingCts = new();
+        protected ILogger<BackgroundService> _logger;
+        protected Task _executingTask = Task.CompletedTask;
+        protected readonly CancellationTokenSource _stoppingCts = new();
+
+        protected BackgroundService(ILogger<BackgroundService> logger)
+        {
+            _logger = logger;
+        }
 
         public abstract Task ExecuteAsync(CancellationToken stoppingToken);
 
@@ -42,12 +49,13 @@ namespace Scrapper.Services
             {
                 // Signal cancellation to the executing method
                 _stoppingCts.Cancel();
-            }
-            finally
-            {
-                // Wait until the task completes or the stop token triggers
+                await Task.Delay(Timeout.Infinite, cancellationToken);
                 Task task = _executingTask;
                 await task;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "StopAsync Unhandled exception!");
             }
 
         }

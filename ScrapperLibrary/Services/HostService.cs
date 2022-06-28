@@ -4,12 +4,11 @@ using Scrapper.Models;
 namespace Scrapper.Services
 {
     public class HostService : BackgroundService
-    {
-        private readonly ILogger<HostService> _logger;
+    {        
         private readonly IWatcherService _watcherService;
         private readonly IFileService _fileService;
 
-        public HostService(ILogger<HostService> logger, IWatcherService watcherService, IFileService fileService)
+        public HostService(ILogger<HostService> logger, IWatcherService watcherService, IFileService fileService) : base(logger)
         {
             _logger = logger;
             _fileService = fileService;
