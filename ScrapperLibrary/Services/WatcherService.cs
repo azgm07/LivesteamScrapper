@@ -421,7 +421,7 @@ public class WatcherService : IWatcherService
 
             //Load streams with string of "website,channel"
             await Task.Run(() => AddStreamEntries(streams), CancellationToken.None);
-            await Task.Delay(5000, CancellationToken);
+            await Task.Delay(5000, CancellationToken.None);
 
             //Setup Debugger
             Dictionary<string, List<string>> debugData = new()

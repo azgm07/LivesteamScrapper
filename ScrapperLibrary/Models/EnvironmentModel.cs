@@ -44,6 +44,14 @@ public class EnvironmentModel : IEnvironmentInterface
         _config = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
     }
 
+    public enum Websites
+    {
+        Booyah,
+        Facebook,
+        Twitch,
+        Youtube
+    }
+
     public static EnvironmentModel GetEnvironment(string website = "")
     {
         return website.ToLower() switch

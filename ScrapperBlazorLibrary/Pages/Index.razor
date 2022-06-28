@@ -9,7 +9,30 @@
 @using System.Text.RegularExpressions
 @inject IWatcherService WatcherService
 
-<h1>Livestreams</h1>
+<div class="container">
+  <div class="row align-items-center">
+    <div class="col">
+      <h1>Livestreams</h1>
+    </div>
+    <div class="col">
+        <div class="input-group mb-3">
+            <input type="text" style="min-width: 120px;" class="form-control" placeholder="Stream">
+            <select class="custom-select" style="min-width: 120px;" @bind="selectStream">
+                <option selected value="">Choose...</option>
+                @foreach (var name in Enum.GetNames(typeof(EnvironmentModel.Websites)))
+                {
+                    <option value="@name.ToLower()">@name</option>
+                }
+            </select>
+            <div class="input-group-append">
+                <button type="button" class="btn btn-outline-secondary" @onclick="AddStream" disabled="@canAdd">
+                Add
+                </button>
+            </div>
+        </div>
+    </div>
+  </div>
+</div>
 
 @if (streams == null)
 {
@@ -20,7 +43,7 @@ else
     <table class="table">
         <thead>
             <tr>
-                <th></th>
+                @*<th></th>*@
                 <th>Website</th>
                 <th>Channel</th>
                 <th>Status</th>
@@ -32,12 +55,12 @@ else
             @foreach (var stream in streams)
             {
                 <tr>
-                    <td><input type="checkbox" name="brand"></td>
+                    @*<td><input type="checkbox" name="brand"></td>*@
                     <td>@Regex.Replace(stream.Website, "^[a-z]", m => m.Value.ToUpper())</td>
                     <td>@stream.Channel</td>
                     @if (stream.Status == EnumsModel.ScrapperStatus.Waiting)
                     {
-                        if (stream.WaitTimer.TimeLeft <= 0 || !stream.WaitTimer.ElapsedOnce)
+                        if (stream.WaitTimer.TimeLeft <= 0 || stream.WaitTimer.ElapsedOnce)
                         {
                             <td>Starting...</td>
                         }
@@ -68,6 +91,8 @@ else
 
 @code {
     private BlockingCollection<Stream> streams = new();
+    private string selectStream;
+    private bool canAdd = false;
 
     protected override void OnInitialized()
     {
@@ -83,5 +108,13 @@ else
             await InvokeAsync(() => { StateHasChanged(); });
             await Task.Delay(1000);            
         }
+    }
+
+    private void AddStream()
+    {
+        //if (WatcherService.AddStream())
+        //{
+            
+        //}
     }
 }
