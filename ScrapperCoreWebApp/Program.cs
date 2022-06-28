@@ -4,6 +4,7 @@ using Scrapper.Models;
 using Scrapper.Services;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
+using ScrapperBlazorLibrary.Services;
 
 namespace ScrapperAspNet.Main;
 public static class Program
@@ -11,21 +12,9 @@ public static class Program
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
-        builder.Logging.ClearProviders();
-        builder.Logging.AddConsole();
 
-        // Add services to the container.
-        builder.Services.AddRazorPages();
-        builder.Services.AddControllersWithViews();
-
-        // Add services
-        builder.Services.AddHostedService<HostService>();
-        builder.Services.AddSingleton<IFileService, FileService>();
-        builder.Services.AddSingleton<IWatcherService, WatcherService>();
-        builder.Services.AddScoped<IBrowserService, BrowserService>();
-        builder.Services.AddScoped<IScrapperInfoService, ScrapperInfoService>();
-        builder.Services.AddScoped<ITimeService, TimeService>();
-        builder.Services.AddSingleton<IWatcherService, WatcherService>();
+        BlazorConfiguration.ConfigureServices(builder);
+        BlazorConfiguration.ConfigureLogging(builder);
 
         var app = builder.Build();
 

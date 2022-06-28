@@ -3,32 +3,27 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Scrapper.Models;
 using Scrapper.Services;
+using ScrapperLibrary.Services;
 
 namespace Scrapper.Main;
 public static class Program
 {
-    public static void Main(string[] args)
+    public async static Task Main(string[] args)
     {
         var builder = Host.CreateDefaultBuilder(args);
         builder.ConfigureServices(services =>
         {
-            services.AddHostedService<HostService>();
-            services.AddSingleton<IFileService, FileService>();
-            services.AddSingleton<IWatcherService, WatcherService>();
-            services.AddScoped<IBrowserService, BrowserService>();
-            services.AddScoped<IScrapperInfoService, ScrapperInfoService>();
-            services.AddScoped<ITimeService, TimeService>();
+            ServiceConfiguration.ConfigureServices(services);
         });
 
         builder.ConfigureLogging(logging =>
         {
-            logging.ClearProviders();
-            logging.AddConsole();
+            ServiceConfiguration.ConfigureLogging(logging);
         });
 
         var app = builder.Build();
 
-        app.Run();
+        await app.RunAsync();
     }
 }
 

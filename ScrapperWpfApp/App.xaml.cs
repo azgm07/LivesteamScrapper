@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Scrapper.Services;
+using ScrapperLibrary.Services;
 using System;
 using System.Threading;
 using System.Windows;
@@ -22,22 +23,14 @@ namespace ScrapperWpfApp
             var builder = Host.CreateDefaultBuilder();
             builder.ConfigureServices(services =>
             {
-                services.AddHostedService<HostService>();
-                services.AddSingleton<IFileService, FileService>();
-                services.AddSingleton<IWatcherService, WatcherService>();
-                services.AddScoped<IBrowserService, BrowserService>();
-                services.AddScoped<IScrapperInfoService, ScrapperInfoService>();
-                services.AddScoped<ITimeService, TimeService>();
+                ServiceConfiguration.ConfigureServices(services);
                 services.AddWpfBlazorWebView();
                 services.AddSingleton(typeof(MainWindow));
-
-                services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(60));
             });
 
             builder.ConfigureLogging(logging =>
             {
-                logging.ClearProviders();
-                logging.AddConsole();
+                ServiceConfiguration.ConfigureLogging(logging);
             });
 
             builder.UseConsoleLifetime();
@@ -47,12 +40,14 @@ namespace ScrapperWpfApp
             ServiceProvider = _host.Services;
         }
 
-        private async void AppStartup(object sender, StartupEventArgs e)
+        protected override async void OnStartup(StartupEventArgs e)
         {
             AppDomain.CurrentDomain.UnhandledException += (sender, error) =>
             {
                 MessageBox.Show(error.ExceptionObject.ToString(), "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             };
+            
+            base.OnStartup(e);
 
             if (ServiceProvider != null)
             {
@@ -60,26 +55,19 @@ namespace ScrapperWpfApp
                 mainWindow.Show();
             }
 
-            try
-            {
-                await _host.RunAsync();
-            }
-            catch (OperationCanceledException)
-            {
-                // suppress
-            }
+            await _host.StartAsync();
         }
 
-        private async void AppExit(object sender, ExitEventArgs e)
+        protected override async void OnExit(ExitEventArgs e)
         {
             AppDomain.CurrentDomain.UnhandledException += (sender, error) =>
             {
                 MessageBox.Show(error.ExceptionObject.ToString(), "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             };
-            using (_host)
-            {
-                await _host.StopAsync();
-            }
+            
+            base.OnExit(e);
+            
+            await _host.StopAsync();
         }
     }
 }

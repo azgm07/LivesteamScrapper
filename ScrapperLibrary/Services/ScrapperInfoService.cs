@@ -153,7 +153,8 @@ public class ScrapperInfoService : IScrapperInfoService
     private async Task CreateInfoLogAsync(CancellationToken token, int delaySeconds = 30)
     {
         _logger.LogInformation("Console Started for {website}/{livestream}", Website, Livestream);
-        Thread.Sleep(delaySeconds * 1000);
+        await Task.Delay(delaySeconds * 1000, token);
+
         while (!token.IsCancellationRequested)
         {
             StringBuilder sb = new();

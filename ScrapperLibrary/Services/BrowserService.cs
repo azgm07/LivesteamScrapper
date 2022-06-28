@@ -18,8 +18,8 @@ public interface IBrowserService
     public IWebElement WaitUntilElementVisible(By elementLocator, int timeout = 10);
     public IWebElement WaitUntilElementClickable(By elementLocator, int timeout = 10);
     public void StartBrowser(bool isHeadless = true);
-    public void OpenBrowserPage(string url, By? waitSelector = null);
-    public void ReloadBrowserPage(By? waitSelector = null);
+    public bool OpenBrowserPage(string url, By? waitSelector = null);
+    public bool ReloadBrowserPage(By? waitSelector = null);
     public void StopBrowserPage();
 
 }
@@ -146,7 +146,7 @@ public sealed class BrowserService : IBrowserService
         }
     }
 
-    public void OpenBrowserPage(string url, By? waitSelector = null)
+    public bool OpenBrowserPage(string url, By? waitSelector = null)
     {
         try
         {
@@ -167,9 +167,11 @@ public sealed class BrowserService : IBrowserService
             IsReady = false;
             throw;
         }
+
+        return IsReady;
     }
 
-    public void ReloadBrowserPage(By? waitSelector = null)
+    public bool ReloadBrowserPage(By? waitSelector = null)
     {
         try
         {
@@ -182,10 +184,6 @@ public sealed class BrowserService : IBrowserService
                 {
                     WaitUntilElementExists(waitSelector);
                 }
-                else
-                {
-                    Thread.Sleep(1000);
-                }
                 IsReady = true;
             }
         }
@@ -194,14 +192,23 @@ public sealed class BrowserService : IBrowserService
             IsReady = false;
             throw;
         }
+
+        return IsReady;
     }
 
     public void StopBrowserPage()
     {
-        if (Browser != null)
+        try
         {
-            Browser.Quit();
-            Browser = null;
+            if (Browser != null)
+            {
+                Browser.Quit();
+            }
         }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "Could not quit browser for {url}", OpenedUrl);
+        }
+        Browser = null;
     }
 }

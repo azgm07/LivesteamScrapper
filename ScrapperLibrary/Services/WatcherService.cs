@@ -34,6 +34,7 @@ public class WatcherService : IWatcherService
     private readonly IFileService _file;
     private bool isReady;
     private readonly ConcurrentQueue<Func<Task>> processQueue;
+    private readonly Task processStreamStack;
 
     public WatcherService(IServiceScopeFactory scopeFactory, ILogger<WatcherService> logger, IFileService file, int secondsToWait = 300)
     {
@@ -47,7 +48,7 @@ public class WatcherService : IWatcherService
         isReady = false;
         processQueue = new();
 
-        _ = Task.Run(() => ProcessStreamStackAsync());
+        processStreamStack = Task.Run(() => ProcessStreamStackAsync());
     }
 
     public bool AddStream(string website, string channelPath)
@@ -356,25 +357,46 @@ public class WatcherService : IWatcherService
 
     private async Task ProcessStreamStackAsync()
     {
-        await Task.Delay(10000, CancellationToken);
-        while (true)
+        try
         {
-            List<Task> tasks = new();
-
-            for (int i = 0; i < 5; i++)
+            try
             {
-                if (processQueue.TryDequeue(out Func<Task>? func) && func != null)
+                await Task.Delay(5000, CancellationToken);
+            }
+            catch (Exception)
+            {
+                //Wrap task delay cancelled
+            }
+            while (true)
+            {
+                List<Task> tasks = new();
+
+                for (int i = 0; i < 5; i++)
                 {
-                    tasks.Add(Task.Run(func, CancellationToken));
+                    if (processQueue.TryDequeue(out Func<Task>? func) && func != null)
+                    {
+                        tasks.Add(Task.Run(func, CancellationToken));
+                    }
+                }
+
+                try
+                {
+                    await Task.WhenAll(tasks);
+                }
+                catch (Exception)
+                {
+                    //Wrap task whenall cancelled
+                }
+
+                if(CancellationToken.IsCancellationRequested && processQueue.IsEmpty)
+                {
+                    break;
                 }
             }
-
-            await Task.WhenAll(tasks);
-
-            if(CancellationToken.IsCancellationRequested && processQueue.IsEmpty)
-            {
-                break;
-            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogCritical(e, "Main stack ProcessStreamStackAsync finished with error");
         }
     }
 
@@ -527,7 +549,10 @@ public class WatcherService : IWatcherService
             await Task.Run(() => SaveCurrentStreams(), CancellationToken.None);
 
             //Finish task
-            await Task.Run(() => AbortAllStreamScrapper(), CancellationToken.None);            
+            await Task.Run(() => AbortAllStreamScrapper(), CancellationToken.None);
+
+            Task stack = processStreamStack;
+            await stack;
         }
     }
 }

@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\ScrapperBlazorLibrary\ScrapperBlazorLibrary.csproj" />
     <ProjectReference Include="..\ScrapperLibrary\ScrapperLibrary.csproj" />
   </ItemGroup>
 

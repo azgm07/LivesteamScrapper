@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Scrapper.Models;
 
 namespace Scrapper.Services
@@ -8,9 +9,8 @@ namespace Scrapper.Services
         private readonly IWatcherService _watcherService;
         private readonly IFileService _fileService;
 
-        public HostService(ILogger<HostService> logger, IWatcherService watcherService, IFileService fileService) : base(logger)
+        public HostService(ILogger<HostService> logger, IHostApplicationLifetime appLifetime, IWatcherService watcherService, IFileService fileService) : base(logger, appLifetime)
         {
-            _logger = logger;
             _fileService = fileService;
             _watcherService = watcherService;
         }

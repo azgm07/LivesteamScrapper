@@ -11,32 +11,6 @@ namespace Scrapper.Services;
 
 public interface IScrapperChatService
 {
-    CancellationTokenSource Cts { get; }
-    string CurrentGame { get; }
-    bool IsScrapping { get; }
-    string LastMessage { get; }
-    string Livestream { get; }
-    int MaxFails { get; }
-    int MessagesFound { get; }
-    ScrapperMode Mode { get; }
-    int ViewersCount { get; }
-    string Website { get; }
-
-    List<ChatMessageModel> GetChatMessages();
-    string GetUntilSpecial(string text);
-    string IncrementStringNumber(string str);
-    void PrepareScrapperPage();
-    (List<ChatMessageModel>, int lastIndex) ReadChat();
-    string? ReadCurrentGame();
-    int? ReadViewerCounter();
-    Task RunChatScrapperAsync(CancellationToken token);
-    Task RunLoggingAsync(CancellationToken token, int delaySeconds = 30);
-    Task RunTestAsync(EnvironmentModel environment, string livestream, int minutes);
-    Task RunViewerGameScrapperAsync(CancellationToken token);
-    Task<bool> RunViewerScrapperAsync(EnvironmentModel environment, string livestream);
-    void StartTimerTasksCancellation(int minutes);
-    void Stop();
-    void WriteData(List<string> lines, string website, string livestream, string type, bool startNew = false);
 }
 
 public class ScrapperChatService : IScrapperChatService
@@ -93,228 +67,6 @@ public class ScrapperChatService : IScrapperChatService
         IsScrapping = false;
         MaxFails = 10;
         mainTasks = new();
-    }
-
-    private bool OpenScrapper()
-    {
-        //OpenBrowser
-        try
-        {
-            _browser.StartBrowser();
-
-            switch (Environment.Website)
-            {
-                case "facebook":
-                case "youtube":
-                    _browser.OpenBrowserPage($"{Environment.Http}{Livestream}/live", Environment.Selector);
-                    break;
-                default:
-                    _browser.OpenBrowserPage($"{Environment.Http}{Livestream}", Environment.Selector);
-                    break;
-            }
-
-            if (_browser.IsReady && _browser.Browser != null)
-            {
-                try
-                {
-                    PrepareScrapperPage();
-                    _logger.LogInformation("Browser page is ready for {website}/{livestream}", Website, Livestream);
-                    IsScrapping = true;
-                }
-                catch (Exception e)
-                {
-                    IsScrapping = false;
-                    _logger.LogError( e, "OpenScrapper");
-                }
-            }
-            else
-            {
-                IsScrapping = false;
-            }
-            return IsScrapping;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError( e, "OpenScrapper");
-            _logger.LogInformation("Browser page is not ready for {website}/{livestream}", Website, Livestream);
-            IsScrapping = false;
-            return IsScrapping;
-        }
-
-    }
-
-    private void ReloadScrapper()
-    {
-        //ReloadBrowser
-        try
-        {
-            isReloading = true;
-
-            if (_browser.Browser == null)
-            {
-                _browser.StartBrowser();
-            }
-
-            _browser.ReloadBrowserPage(Environment.Selector);
-            if (_browser.IsReady && _browser.Browser != null)
-            {
-                PrepareScrapperPage();
-            }
-
-            isReloading = false;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError( e, "ReloadScrapper");
-            _logger.LogInformation("Browser page is not ready for {website}/{livestream}", Website, Livestream);
-            isReloading = false;
-        }
-
-    }
-
-    public async Task RunLoggingAsync(CancellationToken token, int delaySeconds = 30)
-    {
-        _logger.LogInformation("Console Started for {website}/{livestream}", Website, Livestream);
-        Thread.Sleep(delaySeconds * 1000);
-        while (!token.IsCancellationRequested)
-        {
-            StringBuilder sb = new();
-            sb.Append($"Stream: {Website}/{Livestream} | ");
-            sb.Append($"Playing: {CurrentGame} | ");
-            sb.Append($"Viewers Count: {ViewersCount} | ");
-            sb.Append($"Messages found in page: {MessagesFound} | ");
-            sb.Append($"Last message found: {LastMessage}");
-
-            _logger.LogInformation("{message}", sb.ToString());
-
-            await Task.Delay(delaySeconds * 1000).ConfigureAwait(false);
-        }
-
-        _logger.LogInformation("Console Stopped for {website}/{livestream}", Website, Livestream);
-    }
-
-    public async Task RunTestAsync(EnvironmentModel environment, string livestream, int minutes)
-    {
-        Environment = environment;
-        Website = GetUntilSpecial(Environment.Website);
-        Livestream = livestream;
-        bool hasStarted = await Task.Run(() => Start());
-        if (hasStarted)
-        {
-            StartTimerTasksCancellation(minutes);
-
-            List<Task> tasks = new();
-            tasks.Add(RunViewerGameScrapperAsync(Cts.Token));
-            tasks.Add(RunChatScrapperAsync(Cts.Token));
-
-            //Console Tasks
-            tasks.Add(RunLoggingAsync(Cts.Token, 30));
-
-            foreach (var item in tasks)
-            {
-                mainTasks.Add(item);
-            }
-
-            await Task.WhenAll(tasks);
-        }
-
-    }
-    public async Task<bool> RunViewerScrapperAsync(EnvironmentModel environment, string livestream)
-    {
-        if (!IsScrapping)
-        {
-            Environment = environment;
-            Website = GetUntilSpecial(Environment.Website);
-            Livestream = livestream;
-
-            bool hasStarted = await Task.Run(() => Start());
-            int count = 3;
-
-            while (!hasStarted && count > 0)
-            {
-                await Task.Delay(15000);
-                count--;
-                hasStarted = await Task.Run(() => Start());
-            }
-
-            if (hasStarted)
-            {
-                List<Task> tasks = new();
-                tasks.Add(RunViewerGameScrapperAsync(Cts.Token));
-
-                //Console Tasks
-                tasks.Add(RunLoggingAsync(Cts.Token, 30));
-
-                foreach (var item in tasks)
-                {
-                    mainTasks.Add(item);
-                }
-
-                _ = Task.WhenAll(tasks).ContinueWith((task) =>
-                {
-                    Stop();
-                }, TaskScheduler.Default);
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-        else
-        {
-            _logger.LogInformation("Scrapper is already running for {website}/{livestream}", Website, Livestream);
-            return true;
-        }
-    }
-
-    private bool Start()
-    {
-        Cts = new CancellationTokenSource();
-        bool isOpen = OpenScrapper();
-
-        if (isOpen)
-        {
-            _logger.LogInformation("Scrapper has started for {website}/{livestream}", Website, Livestream);
-        }
-        else
-        {
-            _logger.LogInformation("Scrapper failed to start for {website}/{livestream}", Website, Livestream);
-        }
-        return isOpen;
-    }
-
-    public void Stop()
-    {
-        Cts.Cancel();
-        IsScrapping = false;
-
-        if (_browser != null)
-        {
-            _browser.StopBrowserPage();
-        }
-
-        for (int i = 0; i < mainTasks.Count; i++)
-        {
-            _ = mainTasks.Take();
-        }
-
-        if (IsScrapping)
-        {
-            _logger.LogInformation("Scrapper has stopped for {website}/{livestream}", Website, Livestream);
-        }
-    }
-
-    public void StartTimerTasksCancellation(int minutes)
-    {
-        double totalMsec = minutes * 60000;
-        timerTask = new System.Timers.Timer(totalMsec);
-        timerTask.Elapsed += (sender, e) =>
-        {
-            Stop();
-            timerTask.Stop();
-        };
-        timerTask.Start();
     }
 
     public (List<ChatMessageModel>, int lastIndex) ReadChat()
@@ -502,7 +254,7 @@ public class ScrapperChatService : IScrapperChatService
             if (failedAtempts >= MaxFails)
             {
                 _logger.LogInformation("Scrapper failed and has to stop for {website}/{livestream}", Website, Livestream);
-                Stop();
+                //Stop();
                 break;
             }
 
@@ -535,7 +287,7 @@ public class ScrapperChatService : IScrapperChatService
             {
                 Task taskRestart = Task.Run(() =>
                 {
-                    ReloadScrapper();
+                    //ReloadScrapper();
                 }, CancellationToken.None);
 
                 needRestart = false;
@@ -635,7 +387,7 @@ public class ScrapperChatService : IScrapperChatService
             if (failedAtempts >= MaxFails)
             {
                 _logger.LogInformation("Scrapper failed and has to stop for {website}/{livestream}", Website, Livestream);
-                Stop();
+                //Stop();
                 break;
             }
 
@@ -679,7 +431,7 @@ public class ScrapperChatService : IScrapperChatService
             {
                 Task taskRestart = Task.Run(() =>
                 {
-                    ReloadScrapper();
+                    //ReloadScrapper();
                 }, CancellationToken.None);
 
                 needRestart = false;
@@ -808,10 +560,10 @@ public class ScrapperChatService : IScrapperChatService
                 }
                 else
                 {
-                    _browserChat.ReloadBrowserPage();
+                    //_browserChat.ReloadBrowserPageAsync();
                 }
                 url = Environment.Http + "live_chat?is_popout=1&v=" + Livestream.Split("=")[1];
-                _browserChat.OpenBrowserPage(url, null);
+                //_browserChat.OpenBrowserPage(url, null);
 
                 //Change the name to channel name
                 if (_browser.Browser != null)
@@ -834,7 +586,7 @@ public class ScrapperChatService : IScrapperChatService
                     _browserChat.StartBrowser(false);
                 }
                 url = Environment.Http + "popout/" + Livestream + "/chat?popout=";
-                _browserChat.OpenBrowserPage(url, null);
+                //_browserChat.OpenBrowserPage(url, null);
                 break;
             default:
                 break;

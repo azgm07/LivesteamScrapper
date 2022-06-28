@@ -13,16 +13,22 @@ namespace Scrapper.Services
         protected ILogger<BackgroundService> _logger;
         protected Task _executingTask = Task.CompletedTask;
         protected readonly CancellationTokenSource _stoppingCts = new();
+        protected readonly IHostApplicationLifetime _appLifetime;
 
-        protected BackgroundService(ILogger<BackgroundService> logger)
+        protected BackgroundService(ILogger<BackgroundService> logger, IHostApplicationLifetime appLifetime)
         {
             _logger = logger;
+            _appLifetime = appLifetime;
         }
 
         public abstract Task ExecuteAsync(CancellationToken stoppingToken);
 
         public virtual Task StartAsync(CancellationToken cancellationToken)
         {
+            _appLifetime.ApplicationStarted.Register(OnStarted);
+            _appLifetime.ApplicationStopping.Register(OnStopping);
+            _appLifetime.ApplicationStopped.Register(OnStopped);
+
             // Store the task we're executing
             _executingTask = ExecuteAsync(_stoppingCts.Token);
 
@@ -49,7 +55,6 @@ namespace Scrapper.Services
             {
                 // Signal cancellation to the executing method
                 _stoppingCts.Cancel();
-                await Task.Delay(Timeout.Infinite, cancellationToken);
                 Task task = _executingTask;
                 await task;
             }
@@ -69,6 +74,21 @@ namespace Scrapper.Services
         protected virtual void Dispose(bool disposing)
         {
             _stoppingCts.Cancel();
+        }
+
+        protected virtual void OnStarted()
+        {
+            // Perform post-startup activities here
+        }
+
+        protected virtual void OnStopping()
+        {
+            // Perform on-stopping activities here
+        }
+
+        protected virtual void OnStopped()
+        {
+            // Perform post-stopped activities here
         }
     }
 }
