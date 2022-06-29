@@ -76,13 +76,15 @@
                                 if (stream.WaitTimer.TimeLeft <= 0 || stream.WaitTimer.ElapsedOnce)
                                 {
                                     <td>Starting...</td>
+                                    <td><strong>...</strong></td>
+                                    <td><strong>...</strong></td>
                                 }
                                 else
                                 {
                                     <td>@stream.Status (@TimeSpan.FromMilliseconds(stream.WaitTimer.TimeLeft).ToString(@"hh\:mm\:ss"))</td>
+                                    <td>Not streaming</td>
+                                    <td>Not streaming</td>
                                 }
-                                <td></td>
-                                <td></td>
                             }
                             else if(stream.Status == EnumsModel.ScrapperStatus.Running)
                             {
@@ -93,8 +95,8 @@
                             else
                             {
                                 <td>@stream.Status</td>
-                                <td></td>
-                                <td></td>
+                                <td>Offline</td>
+                                <td>Offline</td>
                             }
                             <td>
                                 <div class="d-flex flex-row-reverse">
@@ -102,7 +104,7 @@
                                         X
                                     </button>
 
-                                    @if(stream.Status == EnumsModel.ScrapperStatus.Running)
+                                    @if(stream.Status == EnumsModel.ScrapperStatus.Running || (stream.Status == EnumsModel.ScrapperStatus.Waiting && (stream.WaitTimer.TimeLeft <= 0 || stream.WaitTimer.ElapsedOnce)))
                                     {
                                         <button type="button" class="btn btn-danger ms-1" @onclick="() => StopStream(stream.Website, stream.Channel)" disabled="@DisableAllButtons">
                                             Stop

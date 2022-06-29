@@ -117,6 +117,7 @@ public class WatcherService : IWatcherService
             {
                 Func<Task> func = new(() => StartStreamScrapperAsync(website, channelPath));
                 processQueue.Enqueue(func);
+                ListStreams[index].Status = ScrapperStatus.Waiting;
                 return true;
             }
         }
@@ -141,6 +142,7 @@ public class WatcherService : IWatcherService
             {
                 Func<Task> func = new(() => StopStreamScrapperAsync(website, channelPath));
                 processQueue.Enqueue(func);
+                ListStreams[index].Status = ScrapperStatus.Stopped;
                 return true;
             }
         }
@@ -369,26 +371,20 @@ public class WatcherService : IWatcherService
             }
             while (true)
             {
-                List<Task> tasks = new();
 
-                for (int i = 0; i < 5; i++)
+                if (processQueue.TryDequeue(out Func<Task>? func) && func != null)
                 {
-                    if (processQueue.TryDequeue(out Func<Task>? func) && func != null)
-                    {
-                        tasks.Add(Task.Run(func, CancellationToken));
-                    }
+                    await Task.Run(func, CancellationToken);
                 }
-
-                if (tasks.Count > 0)
+                else
                 {
-                    await Task.WhenAll(tasks);
+                    await Task.Delay(1000, CancellationToken);
                 }
 
                 if (CancellationToken.IsCancellationRequested && processQueue.IsEmpty)
                 {
                     break;
                 }
-                await Task.Delay(1000, CancellationToken);
             }
         }
         catch (Exception e)
