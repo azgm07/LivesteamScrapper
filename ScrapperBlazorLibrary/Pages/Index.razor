@@ -30,21 +30,19 @@
                     }
                 </select>
                 <div class="input-group-append">
-                    <button type="button" class="btn btn-outline-secondary" @onclick="AddStream" disabled="@DisableAllButtons">
+                    <button type="button" class="btn btn-primary" @onclick="AddStream" disabled="@DisableAllButtons">
                         Add
                     </button>
                 </div>
             </div>
         </div>
-        <div class="col-md-4 ms-auto">
-            <div class="input-group ms-auto">
-                <button type="button" class="btn btn-primary" @onclick="StartAllStreams" disabled="@DisableAllButtons">
-                    Start All
-                </button>
-                <button type="button" class="btn btn-danger" @onclick="StopAllStreams" disabled="@DisableAllButtons">
-                    Stop All
-                </button>
-            </div>
+        <div class="col-md-6 ms-auto">
+            <button type="button" class="btn btn-primary float-end ms-3" @onclick="StartAllStreams" disabled="@DisableAllButtons">
+                Start All
+            </button>
+            <button type="button" class="btn btn-danger float-end ms-3" @onclick="StopAllStreams" disabled="@DisableAllButtons">
+                Stop All
+            </button>
         </div>
     </div>
     <div class="row align-items-start">
@@ -100,7 +98,7 @@
                             }
                             <td>
                                 <div class="d-flex flex-row-reverse">
-                                    <button type="button" class="btn btn-outline-dark ms-3" @onclick="RemoveStream" value="@stream.Website,@stream.Channel" disabled="@DisableAllButtons">
+                                    <button type="button" class="btn btn-secondary ms-3" @onclick="RemoveStream" value="@stream.Website,@stream.Channel" disabled="@DisableAllButtons">
                                         X
                                     </button>
 
@@ -168,25 +166,27 @@
 
     private void AddStream()
     {
-        Console.WriteLine($"Adding - Website: {WebsiteAdd}, Channel: {ChannelAdd}");
-        if(string.IsNullOrEmpty(WebsiteAdd))
+        string website = WebsiteAdd;
+        string channel = ChannelAdd;
+        Console.WriteLine($"Adding - Website: {website}, Channel: {channel}");
+        if(string.IsNullOrEmpty(website))
         {
+            Console.WriteLine($"Adding - Website was empty");
             return;
         }
-        else if(string.IsNullOrEmpty(ChannelAdd))
+        else if(string.IsNullOrEmpty(channel))
         {
+            Console.WriteLine($"Adding - Channel was empty");
             return;
         }
         else
         {
-            //if(WatcherService.AddStream(website, channel))
-            //{
-                
-            //}
-            //else
-            //{
-                
-            //}
+            DisableAllButtons = true;
+            if(!WatcherService.AddStream(website, channel))
+            {
+                Console.WriteLine($"Adding - Error adding Website: {website}, Channel: {channel}");
+            }
+            DisableAllButtons = false;
         }
     }
     private void StartAllStreams()

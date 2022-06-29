@@ -75,13 +75,13 @@ public class WatcherService : IWatcherService
                 }
 
                 ListStreams.Add(stream);
+                SaveCurrentStreams();
 
                 if (start)
                 {
                     Func<Task> func = new(() => StartStreamScrapperAsync(website, channelPath));
                     processQueue.Enqueue(func);
                 }
-
                 return true;
             }
             else
@@ -176,6 +176,7 @@ public class WatcherService : IWatcherService
                             ListStreams[index].Scrapper.Stop();
                         }
                         ListStreams.RemoveAt(index);
+                        SaveCurrentStreams();
                         return true;
                     }
                     catch (Exception)
@@ -184,6 +185,7 @@ public class WatcherService : IWatcherService
                     }
                 }));
                 processQueue.Enqueue(func);
+
                 return true;
             }
         }
