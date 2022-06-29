@@ -9,7 +9,7 @@ namespace Scrapper.Services;
 
 public interface IWatcherService
 {
-    bool AddStream(string website, string channelPath);
+    bool AddStream(string website, string channelPath, bool start = true);
     ScrapperStatus GetUpdatedStatus(string website, string channelPath);
     bool RemoveStream(string website, string channelPath);
     void StartAllStreamScrapper();
@@ -51,7 +51,7 @@ public class WatcherService : IWatcherService
         processStreamStack = Task.Run(() => ProcessStreamStackAsync());
     }
 
-    public bool AddStream(string website, string channelPath)
+    public bool AddStream(string website, string channelPath, bool start = true)
     {
         if (!isReady)
         {
@@ -64,13 +64,24 @@ public class WatcherService : IWatcherService
             if (index < 0)
             {
                 EnvironmentModel environment = EnvironmentModel.GetEnvironment(website);
-                Stream stream = new(website, channelPath, environment, _scopeFactory, SecondsToWait)
+                Stream stream = new(website, channelPath, environment, _scopeFactory, SecondsToWait);
+                if(start)
                 {
-                    Status = ScrapperStatus.Waiting
-                };
+                    stream.Status = ScrapperStatus.Waiting;
+                }
+                else
+                {
+                    stream.Status = ScrapperStatus.Stopped;
+                }
+
                 ListStreams.Add(stream);
-                Func<Task> func = new(() => StartStreamScrapperAsync(website, channelPath));
-                processQueue.Enqueue(func);
+
+                if (start)
+                {
+                    Func<Task> func = new(() => StartStreamScrapperAsync(website, channelPath));
+                    processQueue.Enqueue(func);
+                }
+
                 return true;
             }
             else
@@ -98,13 +109,13 @@ public class WatcherService : IWatcherService
             int index = ListStreams.FindIndex(stream => stream.Website == website && stream.Channel == channelPath);
             if (index < 0)
             {
-                Func<Task> func = new(() => StartStreamScrapperAsync(website, channelPath));
-                processQueue.Enqueue(func);
-                return true;
+                return false;
             }
             else
             {
-                return false;
+                Func<Task> func = new(() => StartStreamScrapperAsync(website, channelPath));
+                processQueue.Enqueue(func);
+                return true;
             }
         }
         catch (Exception e)
@@ -122,13 +133,13 @@ public class WatcherService : IWatcherService
             int index = ListStreams.FindIndex(stream => stream.Website == website && stream.Channel == channelPath);
             if (index < 0)
             {
-                Func<Task> func = new(() => StopStreamScrapperAsync(website, channelPath));
-                processQueue.Enqueue(func);
-                return true;
+                return false;
             }
             else
             {
-                return false;
+                Func<Task> func = new(() => StopStreamScrapperAsync(website, channelPath));
+                processQueue.Enqueue(func);
+                return true;
             }
         }
         catch (Exception e)
@@ -350,7 +361,7 @@ public class WatcherService : IWatcherService
             string[] str = stream.Split(',');
             if (str.Length > 1 && !string.IsNullOrEmpty(str[0]) && !string.IsNullOrEmpty(str[1]))
             {
-                AddStream(str[0], str[1]);
+                AddStream(str[0], str[1], false);
             }
         }
     }

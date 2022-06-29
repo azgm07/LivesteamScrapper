@@ -23,7 +23,17 @@ public static class Program
 
         var app = builder.Build();
 
-        await app.RunAsync();
+        Task appTask = app.RunAsync();
+        
+        var watcher = app.Services.GetRequiredService<IWatcherService>();
+        Task task = Task.Run(async () =>
+        {
+            Console.WriteLine("3 seconds to start all...");
+            await Task.Delay(3000);
+            watcher.StartAllStreamScrapper();
+        });
+
+        await appTask;
     }
 }
 

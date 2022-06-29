@@ -19,7 +19,7 @@ namespace ScrapperBlazorLibrary.Services
             builder.Services.AddRazorPages();
             builder.Services.AddControllersWithViews();
             builder.Services.AddServerSideBlazor();
-            //builder.Services.AddHostedService<HostService>();
+            builder.Services.AddHostedService<HostService>();
             builder.Services.AddSingleton<IFileService, FileService>();
             builder.Services.AddSingleton<IWatcherService, WatcherService>();
             builder.Services.AddScoped<IBrowserService, BrowserService>();
