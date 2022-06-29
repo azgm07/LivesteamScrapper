@@ -98,19 +98,19 @@
                             }
                             <td>
                                 <div class="d-flex flex-row-reverse">
-                                    <button type="button" class="btn btn-secondary ms-3" @onclick="RemoveStream" value="@stream.Website,@stream.Channel" disabled="@DisableAllButtons">
+                                    <button type="button" class="btn btn-secondary ms-3" @onclick="() => RemoveStream(stream.Website,stream.Channel)" disabled="@DisableAllButtons">
                                         X
                                     </button>
 
                                     @if(stream.Status == EnumsModel.ScrapperStatus.Running)
                                     {
-                                        <button type="button" class="btn btn-danger ms-1" @onclick="StopStream" value="@stream.Website,@stream.Channel" disabled="@DisableAllButtons">
+                                        <button type="button" class="btn btn-danger ms-1" @onclick="() => StopStream(stream.Website, stream.Channel)" disabled="@DisableAllButtons">
                                             Stop
                                         </button>
                                     }
                                     else
                                     {
-                                        <button type="button" class="btn btn-primary ms-1" @onclick="StartStream" value="@stream.Website,@stream.Channel" disabled="@DisableAllButtons">
+                                        <button type="button" class="btn btn-primary ms-1" @onclick="() => StartStream(stream.Website,stream.Channel)" disabled="@DisableAllButtons">
                                             Start
                                         </button>                                        
                                     }
@@ -189,40 +189,41 @@
             DisableAllButtons = false;
         }
     }
-    private void StartAllStreams()
+    private async void StartAllStreams()
     {
+        DisableAllButtons = true;
         Console.WriteLine($"Starting All Streams");
-        //if (WatcherService.AddStream())
-        //{
-            
-        //}
+        WatcherService.StartAllStreamScrapper();
+        await Task.Delay(1000);
+        DisableAllButtons = false;
     }
-    private void StopAllStreams()
+    private async void StopAllStreams()
     {
+        DisableAllButtons = true;
         Console.WriteLine($"Stopping All Streams");
-        //if (WatcherService.AddStream())
-        //{
-            
-        //}
+        WatcherService.StopAllStreamScrapper();
+        await Task.Delay(1000);
+        DisableAllButtons = false;
     }
-    private void StartStream()
+    private async void StartStream(string website, string channel)
     {
-        //if (WatcherService.AddStream())
-        //{
-            
-        //}
+        DisableAllButtons = true;
+        WatcherService.StartStream(website, channel);
+        await Task.Delay(1000);
+        DisableAllButtons = false;
     }
-    private void StopStream()
+    private async void StopStream(string website, string channel)
     {
-        //if (WatcherService.AddStream())
-        //{
-            
-        //}
-    }private void RemoveStream()
+        DisableAllButtons = true;
+        WatcherService.StopStream(website, channel);
+        await Task.Delay(1000);
+        DisableAllButtons = false;
+    }
+    private async void RemoveStream(string website, string channel)
     {
-        //if (WatcherService.AddStream())
-        //{
-            
-        //}
+        DisableAllButtons = true;
+        WatcherService.RemoveStream(website, channel);
+        await Task.Delay(1000);
+        DisableAllButtons = false;
     }
 }

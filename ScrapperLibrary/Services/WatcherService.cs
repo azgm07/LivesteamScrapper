@@ -16,6 +16,8 @@ public interface IWatcherService
     Task<bool> StartStreamScrapperAsync(string website, string channelPath);
     void StopAllStreamScrapper();
     Task<bool> StopStreamScrapperAsync(string website, string channelPath);
+    public bool StartStream(string website, string channelPath);
+    public bool StopStream(string website, string channelPath);
     Task StreamingWatcherAsync(List<string> streams, ScrapperMode mode, CancellationToken token);
     public List<Stream> ListStreams { get; }
     public int SecondsToWait { get; set; }
@@ -65,7 +67,7 @@ public class WatcherService : IWatcherService
             {
                 EnvironmentModel environment = EnvironmentModel.GetEnvironment(website);
                 Stream stream = new(website, channelPath, environment, _scopeFactory, SecondsToWait);
-                if(start)
+                if (start)
                 {
                     stream.Status = ScrapperStatus.Waiting;
                 }
@@ -166,26 +168,10 @@ public class WatcherService : IWatcherService
             }
             else
             {
-                Func<Task> func = new(() => new Task<bool>(bool () =>
-                {
-                    try
-                    {
-                        ListStreams[index].Status = ScrapperStatus.Stopped;
-                        if(ListStreams[index].Scrapper != null)
-                        {
-                            ListStreams[index].Scrapper.Stop();
-                        }
-                        ListStreams.RemoveAt(index);
-                        SaveCurrentStreams();
-                        return true;
-                    }
-                    catch (Exception)
-                    {
-                        return false;
-                    }
-                }));
-                processQueue.Enqueue(func);
-
+                ListStreams[index].Status = ScrapperStatus.Stopped;
+                ListStreams[index].Scrapper.Stop();
+                ListStreams.RemoveAt(index);
+                SaveCurrentStreams();
                 return true;
             }
         }
@@ -268,7 +254,7 @@ public class WatcherService : IWatcherService
             else
             {
                 ListStreams[index].Status = ScrapperStatus.Stopped;
-                if(ListStreams[index].Scrapper != null)
+                if (ListStreams[index].Scrapper != null)
                 {
                     await Task.Run(() => ListStreams[index].Scrapper.Stop());
                 }
@@ -298,6 +284,7 @@ public class WatcherService : IWatcherService
                 {
                     actions.Add(() =>
                     {
+                        stream.Status = ScrapperStatus.Waiting;
                         StartStream(stream.Website, stream.Channel);
                     }
                     );
@@ -392,19 +379,16 @@ public class WatcherService : IWatcherService
                     }
                 }
 
-                try
+                if (tasks.Count > 0)
                 {
                     await Task.WhenAll(tasks);
                 }
-                catch (Exception)
-                {
-                    //Wrap task whenall cancelled
-                }
 
-                if(CancellationToken.IsCancellationRequested && processQueue.IsEmpty)
+                if (CancellationToken.IsCancellationRequested && processQueue.IsEmpty)
                 {
                     break;
                 }
+                await Task.Delay(1000, CancellationToken);
             }
         }
         catch (Exception e)
