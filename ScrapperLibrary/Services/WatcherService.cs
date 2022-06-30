@@ -11,7 +11,7 @@ public interface IWatcherService
 {
     bool AddStream(string website, string channelPath, bool start = true);
     ScrapperStatus GetUpdatedStatus(string website, string channelPath);
-    bool RemoveStream(string website, string channelPath);
+    bool RemoveStream(string website, string channelPath, bool saveFile = true);
     void StartAllStreamScrapper();
     Task<bool> StartStreamScrapperAsync(string website, string channelPath);
     void StopAllStreamScrapper();
@@ -35,8 +35,8 @@ public class WatcherService : IWatcherService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IFileService _file;
     private bool isReady;
-    private readonly ConcurrentQueue<Func<Task>> processQueue;
-    private readonly Task processStreamStack;
+    private readonly ConcurrentQueue<FuncProcess> processQueue;
+    private readonly Task processQueueTask;
 
     public WatcherService(IServiceScopeFactory scopeFactory, ILogger<WatcherService> logger, IFileService file, int secondsToWait = 300)
     {
@@ -50,7 +50,7 @@ public class WatcherService : IWatcherService
         isReady = false;
         processQueue = new();
 
-        processStreamStack = Task.Run(() => ProcessStreamStackAsync());
+        processQueueTask = Task.Run(() => ProcessQueueAsync());
     }
 
     public bool AddStream(string website, string channelPath, bool start = true)
@@ -82,7 +82,8 @@ public class WatcherService : IWatcherService
                 if (start)
                 {
                     Func<Task> func = new(() => StartStreamScrapperAsync(website, channelPath));
-                    processQueue.Enqueue(func);
+                    FuncProcess funcProcess = new(index, OperationProcess.StartStream, func);
+                    processQueue.Enqueue(funcProcess);
                 }
                 return true;
             }
@@ -116,7 +117,8 @@ public class WatcherService : IWatcherService
             else
             {
                 Func<Task> func = new(() => StartStreamScrapperAsync(website, channelPath));
-                processQueue.Enqueue(func);
+                FuncProcess funcProcess = new(index, OperationProcess.StartStream, func);
+                processQueue.Enqueue(funcProcess);
                 ListStreams[index].Status = ScrapperStatus.Waiting;
                 return true;
             }
@@ -141,7 +143,8 @@ public class WatcherService : IWatcherService
             else
             {
                 Func<Task> func = new(() => StopStreamScrapperAsync(website, channelPath));
-                processQueue.Enqueue(func);
+                FuncProcess funcProcess = new(index, OperationProcess.StopStream, func);
+                processQueue.Enqueue(funcProcess);
                 ListStreams[index].Status = ScrapperStatus.Stopped;
                 return true;
             }
@@ -154,7 +157,7 @@ public class WatcherService : IWatcherService
 
     }
 
-    public bool RemoveStream(string website, string channelPath)
+    public bool RemoveStream(string website, string channelPath, bool saveFile = true)
     {
         if (!isReady)
         {
@@ -173,7 +176,10 @@ public class WatcherService : IWatcherService
                 ListStreams[index].Status = ScrapperStatus.Stopped;
                 ListStreams[index].Scrapper.Stop();
                 ListStreams.RemoveAt(index);
-                SaveCurrentStreams();
+                if(saveFile)
+                {
+                    SaveCurrentStreams();
+                }
                 return true;
             }
         }
@@ -182,7 +188,6 @@ public class WatcherService : IWatcherService
             _logger.LogError(e, "Failed to remove the streaming");
             return false;
         }
-
     }
 
     public ScrapperStatus GetUpdatedStatus(string website, string channelPath)
@@ -309,6 +314,7 @@ public class WatcherService : IWatcherService
 
         try
         {
+            RemoveProcessQueue();
             List<Action> actions = new();
             foreach (var stream in ListStreams)
             {
@@ -329,12 +335,13 @@ public class WatcherService : IWatcherService
     {
         try
         {
+            RemoveProcessQueue();
             List<Action> actions = new();
             foreach (var stream in ListStreams)
             {
                 actions.Add(() =>
                 {
-                    _ = Task.Run(() => StopStreamScrapperAsync(stream.Website, stream.Channel));
+                    RemoveStream(stream.Website, stream.Channel, false);
                 });
             }
             Parallel.Invoke(actions.ToArray());
@@ -357,7 +364,7 @@ public class WatcherService : IWatcherService
         }
     }
 
-    private async Task ProcessStreamStackAsync()
+    private async Task ProcessQueueAsync()
     {
         try
         {
@@ -371,25 +378,76 @@ public class WatcherService : IWatcherService
             }
             while (true)
             {
+                List<FuncProcess> listFunc = new();
 
-                if (processQueue.TryDequeue(out Func<Task>? func) && func != null)
+                for (int i = 0; i < 10; i++)
                 {
-                    await Task.Run(func, CancellationToken);
-                }
-                else
-                {
-                    await Task.Delay(1000, CancellationToken);
+                    if (processQueue.TryDequeue(out FuncProcess? process) && process != null)
+                    {
+                        listFunc.Add(process);
+                        if (process.Operation == OperationProcess.StopStream)
+                        {
+                            Task task = Task.Run(() => RemoveProcessQueue(OperationProcess.StartStream, process.Index));
+                            await task;
+                        }
+                    }
                 }
 
+                List<Task> tasks = new();
+                foreach (var item in listFunc)
+                {
+                    tasks.Add(Task.Run(item.FuncTask, CancellationToken));
+                }
+
+                await Task.WhenAll(tasks);
+
+                //Break if shutdown was requested
                 if (CancellationToken.IsCancellationRequested && processQueue.IsEmpty)
                 {
                     break;
                 }
+
+                await Task.Delay(1000, CancellationToken);
             }
         }
         catch (Exception e)
         {
             _logger.LogCritical(e, "Main stack ProcessStreamStackAsync finished with error");
+        }
+    }
+    private void RemoveProcessQueue()
+    {
+        //Remove all
+        while (!processQueue.IsEmpty)
+        {
+            if (processQueue.TryDequeue(out FuncProcess? process) && process != null)
+            {
+                _logger.LogInformation("Dequeued process from {index}, operation {operation}", process.Index, process.Operation);
+            }
+        }
+    }
+    private void RemoveProcessQueue(OperationProcess operation, int index)
+    {
+        if (index >= 0)
+        {
+            for (int i = 0; i < processQueue.Count; i++)
+            {
+                if (processQueue.TryDequeue(out FuncProcess? process) && process != null)
+                {
+                    if (process.Index != index)
+                    {
+                        processQueue.Enqueue(process);
+                    }
+                    else if (process.Operation != operation)
+                    {
+                        processQueue.Enqueue(process);
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Dequeued process from {index}, operation {operation}", process.Index, process.Operation);
+                    }
+                }
+            }
         }
     }
 
@@ -414,7 +472,6 @@ public class WatcherService : IWatcherService
 
             //Load streams with string of "website,channel"
             await Task.Run(() => AddStreamEntries(streams), CancellationToken.None);
-            await Task.Delay(5000, CancellationToken.None);
 
             //Setup Debugger
             Dictionary<string, List<string>> debugData = new()
@@ -442,62 +499,62 @@ public class WatcherService : IWatcherService
                 {
                     DateTime start = DateTime.Now;
                     List<Stream> streamsCopy = new(ListStreams);
-                    List<Task> debugTasks = new();
 
                     //Debug create new time
                     if (flush)
                     {
-                        await Task.Run(() => debugData["Times"].Add($"{DateTime.Now:dd/MM/yyyy HH:mm:ss}"), CancellationToken.None);
-
-                        foreach (var stream in streamsCopy)
+                        try
                         {
-                            //Debug add status
-                            debugTasks.Add(Task.Run(() =>
+                            await Task.Run(() => debugData["Times"].Add($"{DateTime.Now:dd/MM/yyyy HH:mm:ss}"), CancellationToken.None);
+
+                            foreach (var stream in streamsCopy)
                             {
-                                if (!debugData.ContainsKey($"{stream.Website},{stream.Channel}"))
+                                //Debug add status
+                                await Task.Run(() =>
                                 {
-                                    debugData.Add($"{stream.Website},{stream.Channel}", new List<string>());
-                                }
-                                for (int i = debugData[$"{stream.Website},{stream.Channel}"].Count; i < debugData["Times"].Count - 1; i++)
-                                {
-                                    debugData[$"{stream.Website},{stream.Channel}"].Add("");
-                                }
-                                debugData[$"{stream.Website},{stream.Channel}"].Add(stream.Status.ToString());
-                            }, CancellationToken.None));
-                        }
-                    }
-
-
-                    await Task.WhenAll(debugTasks);
-
-                    //Debug flush out
-                    //Debug create new time
-                    if (flush)
-                    {
-                        await Task.Run(() =>
-                        {
-                            try
-                            {
-                                Dictionary<string, List<string>> debugCopy = new(debugData);
-                                List<string> lines = new()
-                                {
-                                    $"Streams,{string.Join(",", debugCopy["Times"])}"
-                                };
-                                foreach (string item in debugCopy.Keys)
-                                {
-                                    if (item != "Times")
+                                    if (!debugData.ContainsKey($"{stream.Website},{stream.Channel}"))
                                     {
-                                        lines.Add($"{item},{string.Join(",", debugCopy[item])}");
+                                        debugData.Add($"{stream.Website},{stream.Channel}", new List<string>());
                                     }
-                                }
-                                _file.WriteCsv("files/debug", "status.csv", lines, true);
+                                    for (int i = debugData[$"{stream.Website},{stream.Channel}"].Count; i < debugData["Times"].Count - 1; i++)
+                                    {
+                                        debugData[$"{stream.Website},{stream.Channel}"].Add("");
+                                    }
+                                    debugData[$"{stream.Website},{stream.Channel}"].Add(stream.Status.ToString());
+                                }, CancellationToken.None);
                             }
-                            catch (Exception)
+
+                            //Debug flush out
+                            //Debug create new time
+                            await Task.Run(() =>
                             {
-                                _logger.LogWarning("Failed to write the debugger for scrappers status.");
-                            }
-                        }, CancellationToken.None);
-                        flush = false;
+                                try
+                                {
+                                    Dictionary<string, List<string>> debugCopy = new(debugData);
+                                    List<string> lines = new()
+                                    {
+                                        $"Streams,{string.Join(",", debugCopy["Times"])}"
+                                    };
+                                    foreach (string item in debugCopy.Keys)
+                                    {
+                                        if (item != "Times")
+                                        {
+                                            lines.Add($"{item},{string.Join(",", debugCopy[item])}");
+                                        }
+                                    }
+                                    _file.WriteCsv("files/debug", "status.csv", lines, true);
+                                }
+                                catch (Exception)
+                                {
+                                    _logger.LogWarning("Failed to write the debugger for scrappers status.");
+                                }
+                            }, CancellationToken.None);
+                            flush = false;
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogError(e, "Main watcher flush throwed an exception");
+                        }
                     }
 
                     int delay = watcherDelay - (int)(DateTime.Now - start).TotalMilliseconds;
@@ -523,8 +580,8 @@ public class WatcherService : IWatcherService
             //Finish task
             await Task.Run(() => AbortAllStreamScrapper(), CancellationToken.None);
 
-            Task stack = processStreamStack;
-            await stack;
+            Task queue = processQueueTask;
+            await queue;
         }
     }
 
@@ -552,6 +609,26 @@ public class WatcherService : IWatcherService
         {
             stream.WaitTimer.Stop();
         }
+    }
+
+    public class FuncProcess
+    {
+        public int Index { get; set; }
+        public OperationProcess Operation { get; set; }
+        public Func<Task> FuncTask { get; set; }
+
+        public FuncProcess(int index, OperationProcess operation, Func<Task> funcTask)
+        {
+            Index = index;
+            Operation = operation;
+            FuncTask = funcTask;
+        }
+    }
+
+    public enum OperationProcess
+    {
+        StartStream,
+        StopStream
     }
 }
 
@@ -617,7 +694,7 @@ public sealed class TimerPlus : System.Timers.Timer, IDisposable
 {
     private DateTime m_dueTime;
     private bool _elapsedOnce;
-    public bool ElapsedOnce 
+    public bool ElapsedOnce
     {
         get
         {
@@ -626,7 +703,7 @@ public sealed class TimerPlus : System.Timers.Timer, IDisposable
         set
         {
             _elapsedOnce = value;
-            if(value)
+            if (value)
             {
                 ElapsedOnceEvent?.Invoke();
             }
