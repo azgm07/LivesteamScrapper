@@ -16,7 +16,10 @@ namespace ScrapperLibrary.Services
             services.AddScoped<IScrapperInfoService, ScrapperInfoService>();
             services.AddScoped<ITimeService, TimeService>();
 
-            //services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(60));
+            services.Configure<HostOptions>(options =>
+            {
+                options.ShutdownTimeout = TimeSpan.FromSeconds(60);
+            });
         }
 
         public static void ConfigureLogging(ILoggingBuilder logging)

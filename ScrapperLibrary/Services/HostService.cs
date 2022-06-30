@@ -5,33 +5,44 @@ using Scrapper.Models;
 namespace Scrapper.Services
 {
     public class HostService : BackgroundService
-    {        
+    {
         private readonly IWatcherService _watcherService;
         private readonly IFileService _fileService;
+        private readonly ILogger<HostService> _logger;
+        private readonly IHostApplicationLifetime _hostApplicationLifetime;
 
-        public HostService(ILogger<HostService> logger, IHostApplicationLifetime appLifetime, IWatcherService watcherService, IFileService fileService) : base(logger, appLifetime)
+        public HostService(IHostApplicationLifetime hostApplicationLifetime, ILogger<HostService> logger, IHostApplicationLifetime appLifetime, IWatcherService watcherService, IFileService fileService)
         {
+            _hostApplicationLifetime = hostApplicationLifetime;
+            _logger = logger;
             _fileService = fileService;
             _watcherService = watcherService;
         }
 
-        public override Task ExecuteAsync(CancellationToken stoppingToken)
+        protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            try
+            return Task.Run(async () =>
             {
-                List<string> lines = _fileService.ReadCsv("files/config", "streams.txt");
-
-                if (!lines.Any())
+                try
                 {
-                    _logger.LogWarning("Config file is empty, waiting for entries on web browser.");
+                    List<string> lines = _fileService.ReadCsv("files/config", "streams.txt");
+
+                    if (!lines.Any())
+                    {
+                        _logger.LogWarning("Config file is empty, waiting for entries on web browser.");
+                    }
+                    await _watcherService.StreamingWatcherAsync(lines, EnumsModel.ScrapperMode.Delayed, stoppingToken);
                 }
-                return _watcherService.StreamingWatcherAsync(lines, EnumsModel.ScrapperMode.Delayed, stoppingToken);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Unhandled exception!");
-                return Task.CompletedTask;
-            }
+                catch (Exception ex)
+                {
+                    _logger.LogCritical(ex, "Fatal error");
+                    throw;
+                }
+                finally
+                {
+                    _hostApplicationLifetime.StopApplication();
+                }
+            });
         }
     }
 }

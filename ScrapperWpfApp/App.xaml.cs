@@ -9,6 +9,7 @@ using Scrapper.Services;
 using ScrapperLibrary.Services;
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 
 namespace ScrapperWpfApp
@@ -17,6 +18,7 @@ namespace ScrapperWpfApp
     {
         private readonly IHost _host;
         public static IServiceProvider? ServiceProvider { get; private set; }
+        private Task? mainTask;
 
         public App()
         {
@@ -28,11 +30,6 @@ namespace ScrapperWpfApp
                 services.AddSingleton(typeof(MainWindow));
             });
 
-            builder.ConfigureLogging(logging =>
-            {
-                ServiceConfiguration.ConfigureLogging(logging);
-            });
-
             builder.UseConsoleLifetime();
 
             _host = builder.Build();
@@ -40,34 +37,39 @@ namespace ScrapperWpfApp
             ServiceProvider = _host.Services;
         }
 
-        protected override async void OnStartup(StartupEventArgs e)
+        protected override void OnStartup(StartupEventArgs e)
         {
             AppDomain.CurrentDomain.UnhandledException += (sender, error) =>
             {
                 MessageBox.Show(error.ExceptionObject.ToString(), "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             };
             
-            base.OnStartup(e);
-
             if (ServiceProvider != null)
             {
                 var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
                 mainWindow.Show();
             }
 
-            await _host.StartAsync();
+            mainTask = _host.RunAsync();
+            
+            base.OnStartup(e);
         }
 
-        protected override async void OnExit(ExitEventArgs e)
+        protected override void OnExit(ExitEventArgs e)
         {
             AppDomain.CurrentDomain.UnhandledException += (sender, error) =>
             {
                 MessageBox.Show(error.ExceptionObject.ToString(), "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             };
-            
+
+            _host.StopAsync();
+            DateTime start = DateTime.Now;
+            if(mainTask != null)
+            {
+                mainTask.Wait();
+            }
+            TimeSpan lapsed = DateTime.Now - start;
             base.OnExit(e);
-            
-            await _host.StopAsync();
         }
     }
 }

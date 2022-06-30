@@ -33,6 +33,7 @@ namespace ScrapperBlazorLibrary.Services
         {
             builder.Logging.ClearProviders();
             builder.Logging.AddDebug();
+            builder.Logging.AddConsole();
         }
     }
 }
