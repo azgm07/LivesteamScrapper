@@ -30,6 +30,11 @@ namespace ScrapperWpfApp
                 services.AddSingleton(typeof(MainWindow));
             });
 
+            builder.ConfigureLogging(logging =>
+            {
+                ServiceConfiguration.ConfigureLogging(logging);
+            });
+
             builder.UseConsoleLifetime();
 
             _host = builder.Build();

@@ -620,7 +620,8 @@ public class ScrapperInfoService : IScrapperInfoService
                 {
                     if (_browser.Browser != null)
                     {
-                        _browser.WaitUntilElementClickable(LiveElementsModel.GetElements(Environment.Website).OpenLive).Click();
+                        _browser.WaitUntilElementClickable(Environment.OpenLive).Click();
+                        _browser.WaitUntilElementExists(Environment.ReadyCheck);
                     }
                 }
                 catch (Exception)

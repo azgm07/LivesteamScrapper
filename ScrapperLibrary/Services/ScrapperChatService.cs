@@ -548,8 +548,8 @@ public class ScrapperChatService : IScrapperChatService
 
                 if (_browser.Browser != null)
                 {
-                    _browser.WaitUntilElementClickable(LiveElementsModel.GetElements(Environment.Website).OpenLive).Click();
-                    _browser.WaitUntilElementClickable(LiveElementsModel.GetElements(Environment.Website).CloseChatAnnouncement).Click();
+                    _browser.WaitUntilElementClickable(Environment.OpenLive).Click();
+                    _browser.WaitUntilElementClickable(Environment.CloseChatAnnouncement).Click();
                 }
                 break;
             case "youtube":
@@ -570,7 +570,7 @@ public class ScrapperChatService : IScrapperChatService
                 {
                     try
                     {
-                        string name = _browser.Browser.FindElements(LiveElementsModel.GetElements(Environment.Website).ChannelName)[0].Text;
+                        string name = _browser.Browser.FindElements(Environment.ChannelName)[0].Text;
                         Livestream = name;
                     }
                     catch (Exception e)

@@ -14,6 +14,10 @@ public interface IEnvironmentInterface
     public abstract By MessageContent { get; set; }
     public abstract By CounterContainer { get; set; }
     public abstract By GameContainer { get; set; }
+    public abstract By CloseChatAnnouncement { get; set; }
+    public abstract By ChannelName { get; set; }
+    public abstract By OpenLive { get; set; }
+    public abstract By ReadyCheck { get; set; }
 }
 
 public class EnvironmentModel : IEnvironmentInterface
@@ -27,6 +31,10 @@ public class EnvironmentModel : IEnvironmentInterface
     public By MessageContent { get; set; }
     public By CounterContainer { get; set; }
     public By GameContainer { get; set; }
+    public By CloseChatAnnouncement { get; set; }
+    public By ChannelName { get; set; }
+    public By OpenLive { get; set; }
+    public By ReadyCheck { get; set; }
 
     protected readonly IConfiguration _config;
 
@@ -41,6 +49,10 @@ public class EnvironmentModel : IEnvironmentInterface
         MessageContent = By.TagName(string.Empty);
         CounterContainer = By.TagName(string.Empty);
         GameContainer = By.TagName(string.Empty);
+        CloseChatAnnouncement = By.TagName(string.Empty);
+        ChannelName = By.TagName(string.Empty);
+        OpenLive = By.TagName(string.Empty);
+        ReadyCheck = By.TagName(string.Empty);
         _config = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
     }
 
@@ -77,6 +89,10 @@ public class Booyah : EnvironmentModel
         MessageContent = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:MessageContent"));
         CounterContainer = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:CounterContainer"));
         GameContainer = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:GameContainer"));
+        CloseChatAnnouncement = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:GameContainer"));
+        ChannelName = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:GameContainer"));
+        OpenLive = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:GameContainer"));
+        ReadyCheck = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:GameContainer"));
     }
 }
 
@@ -93,6 +109,10 @@ public class Facebook : EnvironmentModel
         MessageContent = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:MessageContent"));
         CounterContainer = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:CounterContainer"));
         GameContainer = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:GameContainer"));
+        CloseChatAnnouncement = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:GameContainer"));
+        ChannelName = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:GameContainer"));
+        OpenLive = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:GameContainer"));
+        ReadyCheck = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:GameContainer"));
     }
 }
 
@@ -109,6 +129,10 @@ public class Twitch : EnvironmentModel
         MessageContent = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:MessageContent"));
         CounterContainer = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:CounterContainer"));
         GameContainer = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:GameContainer"));
+        CloseChatAnnouncement = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:GameContainer"));
+        ChannelName = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:GameContainer"));
+        OpenLive = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:GameContainer"));
+        ReadyCheck = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:GameContainer"));
     }
 }
 
@@ -125,5 +149,9 @@ public class Youtube : EnvironmentModel
         MessageContent = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:MessageContent"));
         CounterContainer = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:CounterContainer"));
         GameContainer = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:GameContainer"));
+        CloseChatAnnouncement = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:GameContainer"));
+        ChannelName = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:GameContainer"));
+        OpenLive = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:GameContainer"));
+        ReadyCheck = By.CssSelector(_config.GetValue<string>($"Environment:{GetType().Name}:GameContainer"));
     }
 }

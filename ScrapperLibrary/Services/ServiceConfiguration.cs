@@ -25,6 +25,7 @@ namespace ScrapperLibrary.Services
         public static void ConfigureLogging(ILoggingBuilder logging)
         {
             logging.ClearProviders();
+            logging.AddDebug();
             logging.AddConsole();
         }
     }
