@@ -410,9 +410,13 @@ public class WatcherService : IWatcherService
                 await Task.Delay(1000, CancellationToken);
             }
         }
+        catch (TaskCanceledException)
+        {
+            _logger.LogWarning("ProcessStreamStackAsync in WatcherService was cancelled");
+        }
         catch (Exception e)
         {
-            _logger.LogCritical(e, "Main stack ProcessStreamStackAsync finished with error");
+            _logger.LogCritical(e, "ProcessStreamStackAsync in WatcherService finished with error");
         }
     }
     private void RemoveProcessQueue()
@@ -551,9 +555,13 @@ public class WatcherService : IWatcherService
                             }, CancellationToken.None);
                             flush = false;
                         }
+                        catch (TaskCanceledException)
+                        {
+                            _logger.LogWarning("StreamingWatcherAsync in WatcherService was cancelled");
+                        }
                         catch (Exception e)
                         {
-                            _logger.LogError(e, "Main watcher flush throwed an exception");
+                            _logger.LogCritical(e, "StreamingWatcherAsync in WatcherService throwed an exception");
                         }
                     }
 
