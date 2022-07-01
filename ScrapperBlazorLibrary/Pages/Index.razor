@@ -172,15 +172,15 @@
     {
         string website = WebsiteAdd;
         string channel = ChannelAdd;
-        _logger.LogInformation($"Adding - Website: {website}, Channel: {channel}");
+        _logger.LogInformation($"Main Window: Adding -> Website: {website}, Channel: {channel}");
         if(string.IsNullOrEmpty(website))
         {
-            _logger.LogInformation($"Adding - Website was empty");
+            _logger.LogInformation($"Main Window: Adding -> Website was empty");
             return;
         }
         else if(string.IsNullOrEmpty(channel))
         {
-            _logger.LogInformation($"Adding - Channel was empty");
+            _logger.LogInformation($"Main Window: Adding -> Channel was empty");
             return;
         }
         else
@@ -188,7 +188,7 @@
             DisableAllButtons = true;
             if(!WatcherService.AddStream(website, channel))
             {
-                _logger.LogInformation($"Adding - Error adding Website: {website}, Channel: {channel}");
+                _logger.LogInformation($"Main Window: Adding -> Error adding Website: {website}, Channel: {channel}");
             }
             DisableAllButtons = false;
         }
@@ -196,7 +196,7 @@
     private async void StartAllStreams()
     {
         DisableAllButtons = true;
-        _logger.LogInformation($"Starting All Streams");
+        _logger.LogInformation($"Main Window: Starting All Streams");
         WatcherService.StartAllStreamScrapper();
         await Task.Delay(1000);
         DisableAllButtons = false;
@@ -204,7 +204,7 @@
     private async void StopAllStreams()
     {
         DisableAllButtons = true;
-        _logger.LogInformation($"Stopping All Streams");
+        _logger.LogInformation($"Main Window: Stopping All Streams");
         WatcherService.StopAllStreamScrapper();
         await Task.Delay(1000);
         DisableAllButtons = false;
@@ -212,6 +212,7 @@
     private async void StartStream(string website, string channel)
     {
         DisableAllButtons = true;
+        _logger.LogInformation($"Main Window: Start -> Website: {website}, Channel: {channel}");
         WatcherService.StartStream(website, channel);
         await Task.Delay(1000);
         DisableAllButtons = false;
@@ -219,6 +220,7 @@
     private async void StopStream(string website, string channel)
     {
         DisableAllButtons = true;
+        _logger.LogInformation($"Main Window: Stop -> Website: {website}, Channel: {channel}");
         WatcherService.StopStream(website, channel);
         await Task.Delay(1000);
         DisableAllButtons = false;
@@ -226,6 +228,7 @@
     private async void RemoveStream(string website, string channel)
     {
         DisableAllButtons = true;
+        _logger.LogInformation($"Main Window: Remove -> Website: {website}, Channel: {channel}");
         WatcherService.RemoveStream(website, channel);
         await Task.Delay(1000);
         DisableAllButtons = false;
