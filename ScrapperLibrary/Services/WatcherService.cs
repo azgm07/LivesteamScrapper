@@ -463,7 +463,7 @@ public class WatcherService : IWatcherService
             lines.Add($"{stream.Website},{stream.Channel}");
         }
 
-        _file.WriteCsv("files/config", "streams.txt", lines, true);
+        _file.WriteCsv("config", "streams.txt", lines, true);
     }
 
     public async Task StreamingWatcherAsync(List<string> streams, ScrapperMode mode, CancellationToken token)

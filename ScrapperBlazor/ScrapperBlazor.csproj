@@ -7,11 +7,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="files\config\streams.txt" />
+    <Compile Remove="files\**" />
+    <Content Remove="files\**" />
+    <EmbeddedResource Remove="files\**" />
+    <None Remove="files\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="files\config\streams.txt">
+    <None Remove="config\streams.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="config\streams.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

@@ -25,7 +25,7 @@ namespace Scrapper.Services
             {
                 try
                 {
-                    List<string> lines = _fileService.ReadCsv("files/config", "streams.txt");
+                    List<string> lines = _fileService.ReadCsv("config", "streams.txt");
 
                     if (!lines.Any())
                     {

@@ -37,7 +37,7 @@ namespace ScrapperWpfApp
 
             Resources.Add("serviceCollection", App.ServiceProvider);
 
-            List<string> lines = _fileService.ReadCsv("files/config", "streams.txt");
+            List<string> lines = _fileService.ReadCsv("config", "streams.txt");
 
             if (!lines.Any())
             {
