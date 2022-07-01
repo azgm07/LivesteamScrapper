@@ -22,6 +22,7 @@ namespace ScrapperBlazorLibrary.Services
             builder.Services.AddHostedService<HostService>();
             builder.Services.AddSingleton<IFileService, FileService>();
             builder.Services.AddSingleton<IWatcherService, WatcherService>();
+            builder.Services.AddSingleton<IProcessService, ProcessService>();
             builder.Services.AddScoped<IBrowserService, BrowserService>();
             builder.Services.AddScoped<IScrapperInfoService, ScrapperInfoService>();
             builder.Services.AddScoped<ITimeService, TimeService>();

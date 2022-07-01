@@ -21,7 +21,6 @@ public interface IWatcherService
     Task StreamingWatcherAsync(List<string> streams, ScrapperMode mode, CancellationToken token);
     public List<Stream> ListStreams { get; }
     public int SecondsToWait { get; set; }
-    public int Threads { get; set; }
     public CancellationToken CancellationToken { get; }
 }
 
@@ -29,31 +28,26 @@ public class WatcherService : IWatcherService
 {
     public List<Stream> ListStreams { get; private set; }
     public int SecondsToWait { get; set; }
-    public int Threads { get; set; }
 
     public CancellationToken CancellationToken { get; private set; }
     private ScrapperMode scrapperMode;
     private readonly ILogger<WatcherService> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IFileService _file;
+    private readonly IProcessService _processService;
     private bool isReady;
-    private readonly ConcurrentQueue<FuncProcess> processQueue;
-    private readonly Task processQueueTask;
 
-    public WatcherService(IServiceScopeFactory scopeFactory, ILogger<WatcherService> logger, IFileService file, int secondsToWait = 300)
+    public WatcherService(IServiceScopeFactory scopeFactory, ILogger<WatcherService> logger, IFileService file, IProcessService processService, int secondsToWait = 300)
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
         _file = file;
+        _processService = processService;
         CancellationToken = new();
         scrapperMode = ScrapperMode.Delayed;
         ListStreams = new();
         SecondsToWait = secondsToWait;
         isReady = false;
-        processQueue = new();
-        Threads = 1;
-
-        processQueueTask = Task.Run(() => ProcessQueueAsync());
     }
 
     public bool AddStream(string website, string channelPath, bool start = true)
@@ -86,7 +80,7 @@ public class WatcherService : IWatcherService
                 {
                     Func<Task> func = new(() => StartStreamScrapperAsync(website, channelPath));
                     FuncProcess funcProcess = new(index, OperationProcess.StartStream, func);
-                    processQueue.Enqueue(funcProcess);
+                    _processService.Queue.Enqueue(funcProcess);
                 }
                 return true;
             }
@@ -121,7 +115,7 @@ public class WatcherService : IWatcherService
             {
                 Func<Task> func = new(() => StartStreamScrapperAsync(website, channelPath));
                 FuncProcess funcProcess = new(index, OperationProcess.StartStream, func);
-                processQueue.Enqueue(funcProcess);
+                _processService.Queue.Enqueue(funcProcess);
                 ListStreams[index].Status = ScrapperStatus.Waiting;
                 return true;
             }
@@ -147,7 +141,7 @@ public class WatcherService : IWatcherService
             {
                 Func<Task> func = new(() => StopStreamScrapperAsync(website, channelPath));
                 FuncProcess funcProcess = new(index, OperationProcess.StopStream, func);
-                processQueue.Enqueue(funcProcess);
+                _processService.Queue.Enqueue(funcProcess);
                 ListStreams[index].Status = ScrapperStatus.Stopped;
                 return true;
             }
@@ -317,7 +311,7 @@ public class WatcherService : IWatcherService
 
         try
         {
-            RemoveProcessQueue();
+            _processService.RemoveProcessQueue();
             List<Action> actions = new();
             foreach (var stream in ListStreams)
             {
@@ -338,7 +332,7 @@ public class WatcherService : IWatcherService
     {
         try
         {
-            RemoveProcessQueue();
+            _processService.RemoveProcessQueue();
             List<Action> actions = new();
             foreach (var stream in ListStreams)
             {
@@ -365,98 +359,7 @@ public class WatcherService : IWatcherService
                 AddStream(str[0], str[1], false);
             }
         }
-    }
-
-    private async Task ProcessQueueAsync()
-    {
-        try
-        {
-            try
-            {
-                await Task.Delay(5000, CancellationToken);
-            }
-            catch (Exception)
-            {
-                //Wrap task delay cancelled
-            }
-            while (true)
-            {
-                List<FuncProcess> listFunc = new();
-
-                for (int i = 0; i < Threads; i++)
-                {
-                    if (processQueue.TryDequeue(out FuncProcess? process) && process != null)
-                    {
-                        listFunc.Add(process);
-                        if (process.Operation == OperationProcess.StopStream)
-                        {
-                            Task task = Task.Run(() => RemoveProcessQueue(OperationProcess.StartStream, process.Index));
-                            await task;
-                        }
-                    }
-                }
-
-                List<Task> tasks = new();
-                foreach (var item in listFunc)
-                {
-                    tasks.Add(Task.Run(item.FuncTask, CancellationToken));
-                }
-
-                await Task.WhenAll(tasks);
-
-                //Break if shutdown was requested
-                if (CancellationToken.IsCancellationRequested && processQueue.IsEmpty)
-                {
-                    break;
-                }
-
-                await Task.Delay(1000, CancellationToken);
-            }
-        }
-        catch (TaskCanceledException)
-        {
-            _logger.LogWarning("ProcessStreamStackAsync in WatcherService was cancelled");
-        }
-        catch (Exception e)
-        {
-            _logger.LogCritical(e, "ProcessStreamStackAsync in WatcherService finished with error");
-        }
-    }
-    private void RemoveProcessQueue()
-    {
-        //Remove all
-        while (!processQueue.IsEmpty)
-        {
-            if (processQueue.TryDequeue(out FuncProcess? process) && process != null)
-            {
-                _logger.LogInformation("Dequeued process from {index}, operation {operation}", process.Index, process.Operation);
-            }
-        }
-    }
-    private void RemoveProcessQueue(OperationProcess operation, int index)
-    {
-        if (index >= 0)
-        {
-            for (int i = 0; i < processQueue.Count; i++)
-            {
-                if (processQueue.TryDequeue(out FuncProcess? process) && process != null)
-                {
-                    if (process.Index != index)
-                    {
-                        processQueue.Enqueue(process);
-                    }
-                    else if (process.Operation != operation)
-                    {
-                        processQueue.Enqueue(process);
-                    }
-                    else
-                    {
-                        _logger.LogInformation("Dequeued process from {index}, operation {operation}", process.Index, process.Operation);
-                    }
-                }
-            }
-        }
-    }
+    }    
 
     private void SaveCurrentStreams()
     {
@@ -591,7 +494,7 @@ public class WatcherService : IWatcherService
             //Finish task
             await Task.Run(() => AbortAllStreamScrapper(), CancellationToken.None);
 
-            Task queue = processQueueTask;
+            Task queue = _processService.QueueTask;
             await queue;
         }
     }
@@ -620,26 +523,6 @@ public class WatcherService : IWatcherService
         {
             stream.WaitTimer.Stop();
         }
-    }
-
-    public class FuncProcess
-    {
-        public int Index { get; set; }
-        public OperationProcess Operation { get; set; }
-        public Func<Task> FuncTask { get; set; }
-
-        public FuncProcess(int index, OperationProcess operation, Func<Task> funcTask)
-        {
-            Index = index;
-            Operation = operation;
-            FuncTask = funcTask;
-        }
-    }
-
-    public enum OperationProcess
-    {
-        StartStream,
-        StopStream
     }
 }
 
