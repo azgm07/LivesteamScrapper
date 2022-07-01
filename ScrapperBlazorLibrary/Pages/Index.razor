@@ -8,8 +8,10 @@
 @using System.Timers
 @using System.Text.RegularExpressions
 @using Microsoft.Extensions.DependencyInjection
+@using Microsoft.Extensions.Logging
 @using Moq
 @inject IWatcherService WatcherService
+@inject ILogger<HostService> _logger
 
 
 <div class="container">
@@ -170,15 +172,15 @@
     {
         string website = WebsiteAdd;
         string channel = ChannelAdd;
-        Console.WriteLine($"Adding - Website: {website}, Channel: {channel}");
+        _logger.LogInformation($"Adding - Website: {website}, Channel: {channel}");
         if(string.IsNullOrEmpty(website))
         {
-            Console.WriteLine($"Adding - Website was empty");
+            _logger.LogInformation($"Adding - Website was empty");
             return;
         }
         else if(string.IsNullOrEmpty(channel))
         {
-            Console.WriteLine($"Adding - Channel was empty");
+            _logger.LogInformation($"Adding - Channel was empty");
             return;
         }
         else
@@ -186,7 +188,7 @@
             DisableAllButtons = true;
             if(!WatcherService.AddStream(website, channel))
             {
-                Console.WriteLine($"Adding - Error adding Website: {website}, Channel: {channel}");
+                _logger.LogInformation($"Adding - Error adding Website: {website}, Channel: {channel}");
             }
             DisableAllButtons = false;
         }
@@ -194,7 +196,7 @@
     private async void StartAllStreams()
     {
         DisableAllButtons = true;
-        Console.WriteLine($"Starting All Streams");
+        _logger.LogInformation($"Starting All Streams");
         WatcherService.StartAllStreamScrapper();
         await Task.Delay(1000);
         DisableAllButtons = false;
@@ -202,7 +204,7 @@
     private async void StopAllStreams()
     {
         DisableAllButtons = true;
-        Console.WriteLine($"Stopping All Streams");
+        _logger.LogInformation($"Stopping All Streams");
         WatcherService.StopAllStreamScrapper();
         await Task.Delay(1000);
         DisableAllButtons = false;

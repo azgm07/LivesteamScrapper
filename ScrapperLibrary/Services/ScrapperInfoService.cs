@@ -76,7 +76,7 @@ public class ScrapperInfoService : IScrapperInfoService
 
     private void StartScrapperBrowser()
     {
-        _browser.StartBrowser(false);
+        _browser.StartBrowser();
 
         switch (Environment.Website)
         {
