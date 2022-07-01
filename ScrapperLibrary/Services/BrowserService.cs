@@ -14,9 +14,9 @@ public interface IBrowserService
     public WebDriver? Browser { get; }
     public string OpenedUrl { get; }
 
-    public IWebElement WaitUntilElementExists(By elementLocator, int timeout = 10);
-    public IWebElement WaitUntilElementVisible(By elementLocator, int timeout = 10);
-    public IWebElement WaitUntilElementClickable(By elementLocator, int timeout = 10);
+    public WebElement? WaitUntilElementExists(By elementLocator, int timeout = 10);
+    public WebElement? WaitUntilElementVisible(By elementLocator, int timeout = 10);
+    public WebElement? WaitUntilElementClickable(By elementLocator, int timeout = 10);
     public void StartBrowser(bool isHeadless = true);
     public bool OpenBrowserPage(string url, By? waitSelector = null);
     public bool ReloadBrowserPage(By? waitSelector = null);
@@ -66,15 +66,19 @@ public sealed class BrowserService : IBrowserService
             //BinaryLocation = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
         };
 
+        var driverService = ChromeDriverService.CreateDefaultService();
+
         //Change options depending on the case
         if (isHeadless)
         {
             options.AddArguments(new List<string>() { "headless", "disable-gpu", "no-sandbox", "silent-launch", "no-startup-window", "disable-extensions",
                 "disable-application-cache", "disable-notifications", "disable-infobars", "log-level=3", "mute-audio" });
+
+            driverService.HideCommandPromptWindow = true;
         }
         else
         {
-            options.AddArguments(new List<string>() { /*"headless",*/ "disable-gpu", "no-sandbox", "silent-launch", "no-startup-window", "disable-extensions",
+            options.AddArguments(new List<string>() { /*"headless",*/ "disable-gpu", "no-sandbox", "disable-extensions",
                 "disable-application-cache", "disable-notifications", "disable-infobars", "log-level=3", "mute-audio" });
         }
 
@@ -98,51 +102,49 @@ public sealed class BrowserService : IBrowserService
         options.AddUserProfilePreference("profile.default_content_setting_values.site_engagement", 2);
         options.AddUserProfilePreference("profile.default_content_setting_values.durable_storage", 2);
 
-        var driverService = ChromeDriverService.CreateDefaultService();
-        driverService.HideCommandPromptWindow = true;
 
         Browser = new ChromeDriver(driverService, options);
     }
 
-    public IWebElement WaitUntilElementExists(By elementLocator, int timeout = 10)
+    public WebElement? WaitUntilElementExists(By elementLocator, int timeout = 10)
     {
         try
         {
             var wait = new WebDriverWait(Browser, TimeSpan.FromSeconds(timeout));
-            return wait.Until(ExpectedConditions.ElementExists(elementLocator));
+            return (WebElement)wait.Until(ExpectedConditions.ElementExists(elementLocator));
         }
         catch (NoSuchElementException)
         {
             _logger.LogWarning("Element locator ({locator}) was not found in current context page.", elementLocator);
-            throw;
+            return null;
         }
     }
 
-    public IWebElement WaitUntilElementVisible(By elementLocator, int timeout = 10)
+    public WebElement? WaitUntilElementVisible(By elementLocator, int timeout = 10)
     {
         try
         {
             var wait = new WebDriverWait(Browser, TimeSpan.FromSeconds(timeout));
-            return wait.Until(ExpectedConditions.ElementIsVisible(elementLocator));
+            return (WebElement)wait.Until(ExpectedConditions.ElementIsVisible(elementLocator));
         }
         catch (NoSuchElementException)
         {
             _logger.LogWarning("Element locator ({locator}) was not visible.", elementLocator);
-            throw;
+            return null;
         }
     }
 
-    public IWebElement WaitUntilElementClickable(By elementLocator, int timeout = 10)
+    public WebElement? WaitUntilElementClickable(By elementLocator, int timeout = 10)
     {
         try
         {
             var wait = new WebDriverWait(Browser, TimeSpan.FromSeconds(timeout));
-            return wait.Until(ExpectedConditions.ElementToBeClickable(elementLocator));
+            return (WebElement)wait.Until(ExpectedConditions.ElementToBeClickable(elementLocator));
         }
         catch (NoSuchElementException)
         {
             _logger.LogWarning("Element locator ({locator}) was not clickable.", elementLocator);
-            throw;
+            return null;
         }
     }
 
@@ -154,12 +156,15 @@ public sealed class BrowserService : IBrowserService
             {
                 IsReady = false;
                 Browser.Navigate().GoToUrl(url);
-                if (waitSelector != null)
+                if (waitSelector != null && WaitUntilElementExists(waitSelector) == null)
                 {
-                    WaitUntilElementExists(waitSelector);
+                    IsReady = false;
                 }
-                OpenedUrl = url;
-                IsReady = true;
+                else
+                {
+                    OpenedUrl = url;
+                    IsReady = true;
+                }
             }
         }
         catch (Exception)
@@ -180,11 +185,14 @@ public sealed class BrowserService : IBrowserService
                 IsReady = false;
 
                 Browser.Navigate().Refresh();
-                if (waitSelector != null)
+                if (waitSelector != null && WaitUntilElementExists(waitSelector) == null)
                 {
-                    WaitUntilElementExists(waitSelector);
+                    IsReady = false;
                 }
-                IsReady = true;
+                else
+                {
+                    IsReady = true;
+                }
             }
         }
         catch (Exception)

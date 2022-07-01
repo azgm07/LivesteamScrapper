@@ -76,7 +76,7 @@ public class ScrapperInfoService : IScrapperInfoService
 
     private void StartScrapperBrowser()
     {
-        _browser.StartBrowser();
+        _browser.StartBrowser(false);
 
         switch (Environment.Website)
         {
@@ -99,9 +99,16 @@ public class ScrapperInfoService : IScrapperInfoService
 
             if (_browser.IsReady && _browser.Browser != null)
             {
-                PrepareScrapperPage();
-                _logger.LogInformation("Browser page is ready for {website}/{livestream}", Website, Livestream);
-                IsScrapping = true;
+                if(PrepareScrapperPage())
+                {
+                    _logger.LogInformation("Browser page is ready for {website}/{livestream}", Website, Livestream);
+                    IsScrapping = true;
+                }
+                else
+                {
+                    _logger.LogWarning("Browser page is not ready for {website}/{livestream}", Website, Livestream);
+                    IsScrapping = false;
+                }
             }
             else
             {
@@ -135,9 +142,9 @@ public class ScrapperInfoService : IScrapperInfoService
                 _browser.ReloadBrowserPage(Environment.Selector);
             }
 
-            if (_browser.IsReady && _browser.Browser != null)
+            if (_browser.IsReady && _browser.Browser != null && !PrepareScrapperPage())
             {
-                PrepareScrapperPage();
+                _logger.LogWarning("Browser page is not ready for {website}/{livestream}", Website, Livestream);
             }
 
             isReloading = false;
@@ -610,32 +617,57 @@ public class ScrapperInfoService : IScrapperInfoService
     }
 
     //Handle page start by environment
-    private void PrepareScrapperPage()
+    private bool PrepareScrapperPage()
     {
+        bool result = false;
         switch (Environment.Website)
         {
             case "facebook":
                 timeoutRestart = 10000;
                 try
                 {
-                    if (_browser.Browser != null)
+                    WebElement? webElementReady = _browser.WaitUntilElementExists(Environment.ReadyCheck);
+                    if (_browser.Browser != null && webElementReady == null)
                     {
-                        _browser.WaitUntilElementClickable(Environment.OpenLive).Click();
-                        _browser.WaitUntilElementExists(Environment.ReadyCheck);
+                        WebElement? webElementOpen = _browser.WaitUntilElementClickable(Environment.OpenLive);
+                        if (webElementOpen != null)
+                        {
+                            webElementOpen.Click();
+                            if (_browser.WaitUntilElementExists(Environment.ReadyCheck) != null)
+                            {
+                                result = true;
+                            }
+                            else
+                            {
+                                result = false;
+                            }
+                        }
+                    }
+                    else if(webElementReady != null)
+                    {
+                        result = true;
+                    }
+                    else
+                    {
+                        result = false;
                     }
                 }
                 catch (Exception)
                 {
                     _logger.LogWarning("Prepare scrapper page failed.");
-                    throw;
+                    result = false;
                 }
                 break;
             case "youtube":
+                result = true;
                 break;
             case "twitch":
+                result = true;
                 break;
             default:
+                result = false;
                 break;
         }
+        return result;
     }
 }
