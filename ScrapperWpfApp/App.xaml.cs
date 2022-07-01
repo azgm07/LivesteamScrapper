@@ -68,13 +68,10 @@ namespace ScrapperWpfApp
             };
 
             _host.StopAsync();
-            DateTime start = DateTime.Now;
             if(mainTask != null)
             {
                 mainTask.Wait();
             }
-            var logger = _host.Services.GetRequiredService<ILogger<HostService>>();
-            logger.LogWarning("WpfApp: Cancellation was performed in {timespan}", DateTime.Now - start);
             base.OnExit(e);
         }
     }
