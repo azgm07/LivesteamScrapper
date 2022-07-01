@@ -21,6 +21,7 @@ public interface IWatcherService
     Task StreamingWatcherAsync(List<string> streams, ScrapperMode mode, CancellationToken token);
     public List<Stream> ListStreams { get; }
     public int SecondsToWait { get; set; }
+    public int Threads { get; set; }
     public CancellationToken CancellationToken { get; }
 }
 
@@ -28,6 +29,7 @@ public class WatcherService : IWatcherService
 {
     public List<Stream> ListStreams { get; private set; }
     public int SecondsToWait { get; set; }
+    public int Threads { get; set; }
 
     public CancellationToken CancellationToken { get; private set; }
     private ScrapperMode scrapperMode;
@@ -49,6 +51,7 @@ public class WatcherService : IWatcherService
         SecondsToWait = secondsToWait;
         isReady = false;
         processQueue = new();
+        Threads = 1;
 
         processQueueTask = Task.Run(() => ProcessQueueAsync());
     }
@@ -380,7 +383,7 @@ public class WatcherService : IWatcherService
             {
                 List<FuncProcess> listFunc = new();
 
-                for (int i = 0; i < 10; i++)
+                for (int i = 0; i < Threads; i++)
                 {
                     if (processQueue.TryDequeue(out FuncProcess? process) && process != null)
                     {

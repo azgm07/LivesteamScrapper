@@ -53,10 +53,20 @@ namespace ScrapperWpfApp
             {
                 var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
                 mainWindow.Show();
+
+                var watcher = ServiceProvider.GetRequiredService<IWatcherService>();
+                for (int i = 0; i < e.Args.Length-1; i++)
+                {
+                    if (e.Args[i] == "-thread" && int.TryParse(e.Args[i+1], out int value))
+                    {
+                        watcher.Threads = value;
+                    }
+                }
             }
 
             mainTask = _host.RunAsync();
-            
+
+
             base.OnStartup(e);
         }
 

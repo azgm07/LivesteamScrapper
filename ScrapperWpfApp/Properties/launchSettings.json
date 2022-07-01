@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ScrapperWpfApp": {
+      "commandName": "Project",
+      "commandLineArgs": "-thread 2"
+    }
+  }
+}
