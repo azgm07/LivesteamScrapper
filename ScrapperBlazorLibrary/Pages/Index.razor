@@ -19,18 +19,16 @@
         <div class="col-md-6">
             <div class="input-group">
                 <input type="text" style="min-width: 120px;" class="form-control" placeholder="Stream" @bind=ChannelAdd>
-                <select class="custom-select" style="min-width: 120px;" @bind="WebsiteAdd">
+                <select class="form-control" style="min-width: 120px;" @bind="WebsiteAdd">
                     <option selected value="">Choose...</option>
                     @foreach (var name in Enum.GetNames(typeof(EnvironmentModel.Websites)))
                     {
                         <option value="@name.ToLower()">@name</option>
                     }
                 </select>
-                <div class="input-group-append">
-                    <button type="button" class="btn btn-primary" @onclick="AddStream" disabled="@DisableAllButtons">
-                        Add
-                    </button>
-                </div>
+                <button type="button" class="btn btn-primary" style="z-index:0" @onclick="AddStream" disabled="@DisableAllButtons">
+                    Add
+                </button>
             </div>
         </div>
         <div class="col-md-6 ms-auto">
@@ -172,15 +170,15 @@
     {
         string website = WebsiteAdd;
         string channel = ChannelAdd;
-        _logger.LogInformation($"Main Window: Adding -> Website: {website}, Channel: {channel}");
+        _logger.LogInformation($"Main Window: Add -> Website: {website}, Channel: {channel}");
         if(string.IsNullOrEmpty(website))
         {
-            _logger.LogInformation($"Main Window: Adding -> Website was empty");
+            _logger.LogInformation($"Main Window: Add -> Website was empty");
             return;
         }
         else if(string.IsNullOrEmpty(channel))
         {
-            _logger.LogInformation($"Main Window: Adding -> Channel was empty");
+            _logger.LogInformation($"Main Window: Add -> Channel was empty");
             return;
         }
         else
@@ -188,7 +186,7 @@
             DisableAllButtons = true;
             if(!WatcherService.AddStream(website, channel))
             {
-                _logger.LogInformation($"Main Window: Adding -> Error adding Website: {website}, Channel: {channel}");
+                _logger.LogInformation($"Main Window: Add -> Error adding Website: {website}, Channel: {channel}");
             }
             DisableAllButtons = false;
         }
