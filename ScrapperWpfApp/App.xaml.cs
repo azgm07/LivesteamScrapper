@@ -73,7 +73,8 @@ namespace ScrapperWpfApp
             {
                 mainTask.Wait();
             }
-            TimeSpan lapsed = DateTime.Now - start;
+            var logger = _host.Services.GetRequiredService<ILogger<HostService>>();
+            logger.LogWarning("WpfApp: Cancellation was performed in {timespan}", DateTime.Now - start);
             base.OnExit(e);
         }
     }
