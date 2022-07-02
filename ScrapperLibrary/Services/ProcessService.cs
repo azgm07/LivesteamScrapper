@@ -5,76 +5,86 @@ namespace Scrapper.Services;
 
 public interface IProcessService
 {
-    public ConcurrentQueue<FuncProcess> Queue{ get; }
+    public ConcurrentQueue<FuncProcess> StopQueue{ get; }
+    public ConcurrentQueue<FuncProcess> StartQueue{ get; }
+    public ConcurrentQueue<FuncProcess> RunQueue{ get; }
     public int Threads { get; set; }
-    public CancellationToken CancellationToken { get; }
-    public Task QueueTask { get; }
-    public void RemoveProcessQueue();
-    public void RemoveProcessQueue(OperationProcess operation);
-    public void RemoveProcessQueue(OperationProcess operation, int index);
+    public void RemoveProcessQueue(ConcurrentQueue<FuncProcess> queue);
+    public void RemoveProcessQueue(ConcurrentQueue<FuncProcess> queue, OperationProcess operation);
+    public void RemoveProcessQueue(ConcurrentQueue<FuncProcess> queue, OperationProcess operation, int index);
+    public Task ProcessQueueAsync(CancellationToken token);
 }
 public class ProcessService : IProcessService
 {
     private readonly ILogger<ProcessService> _logger;
     
-    public Task QueueTask { get; private set; }
-
-    public ConcurrentQueue<FuncProcess> Queue { get; private set; }
+    public ConcurrentQueue<FuncProcess> StartQueue { get; private set; }
+    public ConcurrentQueue<FuncProcess> StopQueue { get; private set; }
+    public ConcurrentQueue<FuncProcess> RunQueue { get; private set; }
     public int Threads { get; set; }
-    public CancellationToken CancellationToken { get; private set; }
 
     public ProcessService(ILogger<ProcessService> logger)
     {
         _logger = logger;
-        Queue = new();
-
-        QueueTask = Task.Run(() => ProcessQueueAsync());
+        StartQueue = new();
+        StopQueue = new();
+        RunQueue = new();
     }
 
-    public async Task ProcessQueueAsync()
+    public async Task ProcessQueueAsync(CancellationToken token)
     {
         try
         {
-            try
-            {
-                await Task.Delay(5000, CancellationToken);
-            }
-            catch (Exception)
-            {
-                //Wrap task delay cancelled
-            }
+            await Task.Delay(5000, token);
+
             while (true)
             {
                 List<FuncProcess> listFunc = new();
 
                 for (int i = 0; i < Threads; i++)
                 {
-                    if (Queue.TryDequeue(out FuncProcess? process) && process != null)
+                    if (StopQueue.TryDequeue(out FuncProcess? processStop) && processStop != null)
                     {
-                        listFunc.Add(process);
-                        if (process.Operation == OperationProcess.StopStream)
+                        listFunc.Add(processStop);
+                        List<Task> tasksList = new()
                         {
-                            Task task = Task.Run(() => RemoveProcessQueue(OperationProcess.StartStream, process.Index));
-                            await task;
+                            Task.Run(() => RemoveProcessQueue(StartQueue, processStop.Index), CancellationToken.None),
+                            Task.Run(() => RemoveProcessQueue(RunQueue, processStop.Index), CancellationToken.None)
+                        };
+                        for (int j = 0; j < listFunc.Count; j++)
+                        {
+                            if (listFunc[j].Index == processStop.Index)
+                            {
+                                listFunc.RemoveAt(j);
+                            }
                         }
+                        await Task.WhenAll(tasksList);
+                    }
+                    else if (StartQueue.TryDequeue(out FuncProcess? processStart) && processStart != null)
+                    {
+                        listFunc.Add(processStart);
+                    }
+                    else if (RunQueue.TryDequeue(out FuncProcess? processRun) && processRun != null)
+                    {
+                        listFunc.Add(processRun);
                     }
                 }
 
                 List<Task> tasks = new();
                 foreach (var item in listFunc)
                 {
-                    tasks.Add(Task.Run(item.FuncTask, CancellationToken));
+                    tasks.Add(Task.Run(item.FuncTask, token));
                 }
 
                 await Task.WhenAll(tasks);
 
                 //Break if shutdown was requested
-                if (CancellationToken.IsCancellationRequested && Queue.IsEmpty)
+                if (token.IsCancellationRequested && StartQueue.IsEmpty && StopQueue.IsEmpty && RunQueue.IsEmpty)
                 {
                     break;
                 }
 
-                await Task.Delay(1000, CancellationToken);
+                await Task.Delay(1000, token);
             }
         }
         catch (TaskCanceledException)
@@ -86,26 +96,26 @@ public class ProcessService : IProcessService
             _logger.LogCritical(e, "ProcessStreamStackAsync in WatcherService finished with error");
         }
     }
-    public void RemoveProcessQueue()
+    public void RemoveProcessQueue(ConcurrentQueue<FuncProcess> queue)
     {
         //Remove all
-        while (!Queue.IsEmpty)
+        while (!queue.IsEmpty)
         {
-            if (Queue.TryDequeue(out FuncProcess? process) && process != null)
+            if (queue.TryDequeue(out FuncProcess? process) && process != null)
             {
                 _logger.LogInformation("Dequeued process from {index}, operation {operation}", process.Index, process.Operation);
             }
         }
     }
-    public void RemoveProcessQueue(OperationProcess operation)
+    public void RemoveProcessQueue(ConcurrentQueue<FuncProcess> queue, OperationProcess operation)
     {
-        for (int i = 0; i < Queue.Count; i++)
+        for (int i = 0; i < queue.Count; i++)
         {
-            if (Queue.TryDequeue(out FuncProcess? process) && process != null)
+            if (queue.TryDequeue(out FuncProcess? process) && process != null)
             {
                 if (process.Operation != operation)
                 {
-                    Queue.Enqueue(process);
+                    queue.Enqueue(process);
                 }
                 else
                 {
@@ -114,21 +124,38 @@ public class ProcessService : IProcessService
             }
         }
     }
-    public void RemoveProcessQueue(OperationProcess operation, int index)
+    public void RemoveProcessQueue(ConcurrentQueue<FuncProcess> queue, int index)
+    {
+        for (int i = 0; i < queue.Count; i++)
+        {
+            if (queue.TryDequeue(out FuncProcess? process) && process != null)
+            {
+                if (process.Index != index)
+                {
+                    queue.Enqueue(process);
+                }
+                else
+                {
+                    _logger.LogInformation("Dequeued process from {index}, operation {operation}", process.Index, process.Operation);
+                }
+            }
+        }
+    }
+    public void RemoveProcessQueue(ConcurrentQueue<FuncProcess> queue, OperationProcess operation, int index)
     {
         if (index >= 0)
         {
-            for (int i = 0; i < Queue.Count; i++)
+            for (int i = 0; i < queue.Count; i++)
             {
-                if (Queue.TryDequeue(out FuncProcess? process) && process != null)
+                if (queue.TryDequeue(out FuncProcess? process) && process != null)
                 {
                     if (process.Index != index)
                     {
-                        Queue.Enqueue(process);
+                        queue.Enqueue(process);
                     }
                     else if (process.Operation != operation)
                     {
-                        Queue.Enqueue(process);
+                        queue.Enqueue(process);
                     }
                     else
                     {
@@ -157,5 +184,6 @@ public class FuncProcess
 public enum OperationProcess
 {
     StartStream,
-    StopStream
+    StopStream,
+    RunScrapper
 }

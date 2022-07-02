@@ -11,7 +11,7 @@ namespace Scrapper.Services
         private readonly ILogger<HostService> _logger;
         private readonly IHostApplicationLifetime _hostApplicationLifetime;
 
-        public HostService(IHostApplicationLifetime hostApplicationLifetime, ILogger<HostService> logger, IHostApplicationLifetime appLifetime, IWatcherService watcherService, IFileService fileService)
+        public HostService(IHostApplicationLifetime hostApplicationLifetime, ILogger<HostService> logger, IWatcherService watcherService, IFileService fileService)
         {
             _hostApplicationLifetime = hostApplicationLifetime;
             _logger = logger;
@@ -31,7 +31,7 @@ namespace Scrapper.Services
                     {
                         _logger.LogWarning("Config file is empty, waiting for entries on web browser.");
                     }
-                    await _watcherService.StreamingWatcherAsync(lines, EnumsModel.ScrapperMode.Delayed, stoppingToken);
+                    await _watcherService.StreamingWatcherAsync(lines, stoppingToken);
                 }
                 catch (Exception ex)
                 {
@@ -42,7 +42,7 @@ namespace Scrapper.Services
                 {
                     _hostApplicationLifetime.StopApplication();
                 }
-            });
+            }, CancellationToken.None);
         }
     }
 }

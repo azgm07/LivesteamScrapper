@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Scrapper.Models;
+using ScrapperLibrary.Interfaces;
 using System.Collections.Concurrent;
 using System.Timers;
 using static Scrapper.Models.EnumsModel;
@@ -18,7 +19,7 @@ public interface IWatcherService
     Task<bool> StopStreamScrapperAsync(string website, string channelPath);
     public bool StartStream(string website, string channelPath);
     public bool StopStream(string website, string channelPath);
-    Task StreamingWatcherAsync(List<string> streams, ScrapperMode mode, CancellationToken token);
+    Task StreamingWatcherAsync(List<string> streams, CancellationToken token);
     public List<Stream> ListStreams { get; }
     public int SecondsToWait { get; set; }
     public CancellationToken CancellationToken { get; }
@@ -30,7 +31,6 @@ public class WatcherService : IWatcherService
     public int SecondsToWait { get; set; }
 
     public CancellationToken CancellationToken { get; private set; }
-    private ScrapperMode scrapperMode;
     private readonly ILogger<WatcherService> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IFileService _file;
@@ -44,7 +44,6 @@ public class WatcherService : IWatcherService
         _file = file;
         _processService = processService;
         CancellationToken = new();
-        scrapperMode = ScrapperMode.Delayed;
         ListStreams = new();
         SecondsToWait = secondsToWait;
         isReady = false;
@@ -80,7 +79,7 @@ public class WatcherService : IWatcherService
                 {
                     Func<Task> func = new(() => StartStreamScrapperAsync(website, channelPath));
                     FuncProcess funcProcess = new(index, OperationProcess.StartStream, func);
-                    _processService.Queue.Enqueue(funcProcess);
+                    _processService.StartQueue.Enqueue(funcProcess);
                 }
                 return true;
             }
@@ -115,7 +114,7 @@ public class WatcherService : IWatcherService
             {
                 Func<Task> func = new(() => StartStreamScrapperAsync(website, channelPath));
                 FuncProcess funcProcess = new(index, OperationProcess.StartStream, func);
-                _processService.Queue.Enqueue(funcProcess);
+                _processService.StartQueue.Enqueue(funcProcess);
                 ListStreams[index].Status = ScrapperStatus.Waiting;
                 return true;
             }
@@ -141,7 +140,7 @@ public class WatcherService : IWatcherService
             {
                 Func<Task> func = new(() => StopStreamScrapperAsync(website, channelPath));
                 FuncProcess funcProcess = new(index, OperationProcess.StopStream, func);
-                _processService.Queue.Enqueue(funcProcess);
+                _processService.StopQueue.Enqueue(funcProcess);
                 ListStreams[index].Status = ScrapperStatus.Stopped;
                 return true;
             }
@@ -224,7 +223,7 @@ public class WatcherService : IWatcherService
             {
                 if (ListStreams[index].Scrapper != null && !ListStreams[index].Scrapper.IsScrapping)
                 {
-                    result = await ListStreams[index].Scrapper.RunScrapperAsync(ListStreams[index].Environment, ListStreams[index].Channel, scrapperMode);
+                    result = await ListStreams[index].Scrapper.RunScrapperAsync(ListStreams[index].Environment, ListStreams[index].Channel, index);
                 }
                 if (result)
                 {
@@ -311,7 +310,8 @@ public class WatcherService : IWatcherService
 
         try
         {
-            _processService.RemoveProcessQueue();
+            _processService.RemoveProcessQueue(_processService.StartQueue);
+            _processService.RemoveProcessQueue(_processService.RunQueue);
             List<Action> actions = new();
             foreach (var stream in ListStreams)
             {
@@ -332,7 +332,8 @@ public class WatcherService : IWatcherService
     {
         try
         {
-            _processService.RemoveProcessQueue();
+            _processService.RemoveProcessQueue(_processService.StartQueue);
+            _processService.RemoveProcessQueue(_processService.RunQueue);
             List<Action> actions = new();
             foreach (var stream in ListStreams)
             {
@@ -372,11 +373,13 @@ public class WatcherService : IWatcherService
         _file.WriteCsv("config", "streams.txt", lines, true);
     }
 
-    public async Task StreamingWatcherAsync(List<string> streams, ScrapperMode mode, CancellationToken token)
+    public async Task StreamingWatcherAsync(List<string> streams, CancellationToken token)
     {
+        //Start process
+        Task processTask = Task.Run(() => _processService.ProcessQueueAsync(token), CancellationToken.None);
+
         try
         {
-            scrapperMode = mode;
             CancellationToken = token;
             isReady = true;
 
@@ -401,6 +404,8 @@ public class WatcherService : IWatcherService
             //Add event
             Stream.ChangeScrapperStatusEvent += Stream_ChangeScrapperStatusEvent;
             Stream.ElapsedOnceEvent += Stream_ElapsedOnceEvent;
+
+            
 
             //Check and update
             while (!CancellationToken.IsCancellationRequested)
@@ -494,8 +499,7 @@ public class WatcherService : IWatcherService
             //Finish task
             await Task.Run(() => AbortAllStreamScrapper(), CancellationToken.None);
 
-            Task queue = _processService.QueueTask;
-            await queue;
+            await processTask;
         }
     }
 
@@ -532,11 +536,11 @@ public sealed class Stream
     public string Channel { get; set; }
     public EnvironmentModel Environment { get; set; }
     private readonly IServiceScope _scope;
-    public IScrapperInfoService Scrapper
+    public IScrapperService Scrapper
     {
         get
         {
-            IScrapperInfoService service = (IScrapperInfoService)_scope.ServiceProvider.GetRequiredService(typeof(IScrapperInfoService));
+            IScrapperService service = (IScrapperService)_scope.ServiceProvider.GetRequiredService(typeof(IScrapperService));
             return service;
 
         }

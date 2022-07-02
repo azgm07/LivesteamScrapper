@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Scrapper.Services;
+using ScrapperLibrary.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,7 +25,7 @@ namespace ScrapperBlazorLibrary.Services
             builder.Services.AddSingleton<IWatcherService, WatcherService>();
             builder.Services.AddSingleton<IProcessService, ProcessService>();
             builder.Services.AddScoped<IBrowserService, BrowserService>();
-            builder.Services.AddScoped<IScrapperInfoService, ScrapperInfoService>();
+            builder.Services.AddScoped<IScrapperService, ScrapperProcessService>();
             builder.Services.AddScoped<ITimeService, TimeService>();
             builder.Services.AddSingleton<IWatcherService, WatcherService>();
             builder.Services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(60));
@@ -34,7 +35,6 @@ namespace ScrapperBlazorLibrary.Services
         {
             builder.Logging.ClearProviders();
             builder.Logging.AddDebug();
-            builder.Logging.AddConsole();
         }
     }
 }

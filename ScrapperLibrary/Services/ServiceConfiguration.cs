@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Scrapper.Services;
+using ScrapperLibrary.Interfaces;
 
 namespace ScrapperLibrary.Services
 {
@@ -14,7 +15,7 @@ namespace ScrapperLibrary.Services
             services.AddSingleton<IWatcherService, WatcherService>();
             services.AddSingleton<IProcessService, ProcessService>();
             services.AddScoped<IBrowserService, BrowserService>();
-            services.AddScoped<IScrapperInfoService, ScrapperInfoService>();
+            services.AddScoped<IScrapperService, ScrapperProcessService>();
             services.AddScoped<ITimeService, TimeService>();
 
             services.Configure<HostOptions>(options =>
