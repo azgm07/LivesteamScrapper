@@ -23,6 +23,19 @@ public interface IWatcherService
     public List<Stream> ListStreams { get; }
     public int SecondsToWait { get; set; }
     public CancellationToken CancellationToken { get; }
+
+    public delegate void AddStreamEventHandler(string website, string channelPath);
+    public event AddStreamEventHandler? AddStreamEvent;
+    public delegate void RemoveStreamEventHandler(string website, string channelPath);
+    public event RemoveStreamEventHandler? RemoveStreamEvent;
+    public delegate void StartAllStreamEventHandler();
+    public event StartAllStreamEventHandler? StartAllStreamEvent;
+    public delegate void StopAllStreamEventHandler();
+    public event StopAllStreamEventHandler? StopAllStreamEvent;
+    public delegate void StartStreamEventHandler(string website, string channelPath);
+    public event StartStreamEventHandler? StartStreamEvent;
+    public delegate void StopStreamEventHandler(string website, string channelPath);
+    public event StopStreamEventHandler? StopStreamEvent;
 }
 
 public class WatcherService : IWatcherService
@@ -36,6 +49,13 @@ public class WatcherService : IWatcherService
     private readonly IFileService _file;
     private readonly IProcessService _processService;
     private bool isReady;
+
+    public event IWatcherService.AddStreamEventHandler? AddStreamEvent;
+    public event IWatcherService.RemoveStreamEventHandler? RemoveStreamEvent;
+    public event IWatcherService.StartAllStreamEventHandler? StartAllStreamEvent;
+    public event IWatcherService.StopAllStreamEventHandler? StopAllStreamEvent;
+    public event IWatcherService.StartStreamEventHandler? StartStreamEvent;
+    public event IWatcherService.StopStreamEventHandler? StopStreamEvent;
 
     public WatcherService(IServiceScopeFactory scopeFactory, ILogger<WatcherService> logger, IFileService file, IProcessService processService, int secondsToWait = 600)
     {
@@ -51,6 +71,8 @@ public class WatcherService : IWatcherService
 
     public bool AddStream(string website, string channelPath, bool start = true)
     {
+        AddStreamEvent?.Invoke(website, channelPath);
+
         if (!isReady)
         {
             return false;
@@ -98,6 +120,8 @@ public class WatcherService : IWatcherService
 
     public bool StartStream(string website, string channelPath)
     {
+        StartStreamEvent?.Invoke(website, channelPath);
+
         if (!isReady)
         {
             return false;
@@ -129,6 +153,8 @@ public class WatcherService : IWatcherService
 
     public bool StopStream(string website, string channelPath)
     {
+        StopStreamEvent?.Invoke(website, channelPath);
+
         try
         {
             int index = ListStreams.FindIndex(stream => stream.Website == website && stream.Channel == channelPath);
@@ -156,6 +182,8 @@ public class WatcherService : IWatcherService
 
     public bool RemoveStream(string website, string channelPath, bool saveFile = true)
     {
+        RemoveStreamEvent?.Invoke(website, channelPath);
+
         if (!isReady)
         {
             return false;
@@ -273,6 +301,8 @@ public class WatcherService : IWatcherService
 
     public void StartAllStreamScrapper()
     {
+        StartAllStreamEvent?.Invoke();
+
         if (!isReady)
         {
             return;
@@ -303,6 +333,8 @@ public class WatcherService : IWatcherService
 
     public void StopAllStreamScrapper()
     {
+        StartAllStreamEvent?.Invoke();
+
         if (!isReady)
         {
             return;
@@ -405,8 +437,6 @@ public class WatcherService : IWatcherService
             Stream.ChangeScrapperStatusEvent += Stream_ChangeScrapperStatusEvent;
             Stream.ElapsedOnceEvent += Stream_ElapsedOnceEvent;
 
-            
-
             //Check and update
             while (!CancellationToken.IsCancellationRequested)
             {
@@ -491,6 +521,10 @@ public class WatcherService : IWatcherService
         }
         finally
         {
+            //Remove events
+            Stream.ChangeScrapperStatusEvent -= Stream_ChangeScrapperStatusEvent;
+            Stream.ElapsedOnceEvent -= Stream_ElapsedOnceEvent;
+
             isReady = false;
 
             //Salve current streams
@@ -591,6 +625,7 @@ public sealed class Stream : IDisposable
     {
         Status = ScrapperStatus.Stopped;
         Scrapper.Stop();
+        Scrapper.Dispose();
         WaitTimer?.Dispose();
         throw new NotImplementedException();
     }

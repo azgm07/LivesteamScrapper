@@ -6,7 +6,7 @@ using SeleniumExtras.WaitHelpers;
 
 namespace Scrapper.Services;
 
-public interface IBrowserService
+public interface IBrowserService : IDisposable
 {
     public bool IsScrapping { get; }
     public bool IsBrowserOpened { get; }
@@ -21,7 +21,6 @@ public interface IBrowserService
     public bool OpenBrowserPage(string url, By? waitSelector = null);
     public bool ReloadBrowserPage(By? waitSelector = null);
     public void StopBrowserPage();
-
 }
 
 public sealed class BrowserService : IBrowserService
@@ -110,11 +109,12 @@ public sealed class BrowserService : IBrowserService
             options.AddUserProfilePreference("profile.default_content_setting_values.durable_storage", 2);
 
             Browser = new ChromeDriver(driverService, options);
+
+            _logger.LogInformation("Browser opened for {url}", OpenedUrl);
         }
         catch (Exception e)
         {
-            //See if there's an error.
-            _ = e;
+            _logger.LogWarning(e, "Could not open browser for {url}", OpenedUrl);
         }
     }
 
@@ -223,6 +223,7 @@ public sealed class BrowserService : IBrowserService
             if (Browser != null)
             {
                 Browser.Quit();
+                _logger.LogInformation("Browser closed for {url}", OpenedUrl);
             }
         }
         catch (Exception e)
@@ -230,5 +231,13 @@ public sealed class BrowserService : IBrowserService
             _logger.LogWarning(e, "Could not quit browser for {url}", OpenedUrl);
         }
         Browser = null;
+    }
+
+    public void Dispose()
+    {
+        if (Browser != null)
+        {
+            Browser.Quit();
+        }
     }
 }

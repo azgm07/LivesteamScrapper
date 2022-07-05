@@ -11,7 +11,7 @@ using static Scrapper.Models.EnumsModel;
 
 namespace Scrapper.Services;
 
-public class ScrapperInfoService : IScrapperService
+public sealed class ScrapperInfoService : IScrapperService
 {
     private readonly ILogger<ScrapperInfoService> _logger;
 
@@ -501,5 +501,11 @@ public class ScrapperInfoService : IScrapperService
                 break;
         }
         return result;
+    }
+
+    public void Dispose()
+    {
+        Stop();
+        _browser.Dispose();
     }
 }

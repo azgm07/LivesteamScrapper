@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace ScrapperLibrary.Interfaces
 {
-    public interface IScrapperService
+    public interface IScrapperService : IDisposable
     {
         CancellationTokenSource Cts { get; }
         string CurrentGame { get; }

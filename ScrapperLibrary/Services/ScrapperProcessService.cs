@@ -9,9 +9,9 @@ using static Scrapper.Models.EnumsModel;
 
 namespace Scrapper.Services;
 
-public class ScrapperProcessService : IScrapperService
+public sealed class ScrapperProcessService : IScrapperService
 {
-    private readonly ILogger<ScrapperInfoService> _logger;
+    private readonly ILogger<ScrapperProcessService> _logger;
 
     public bool IsScrapping { get; private set; }
     public EnvironmentModel Environment { get; private set; }
@@ -31,7 +31,7 @@ public class ScrapperProcessService : IScrapperService
     public int ViewersCount { get; private set; }
 
     //Constructor
-    public ScrapperProcessService(ILogger<ScrapperInfoService> logger, IBrowserService browser, IFileService file, IProcessService process)
+    public ScrapperProcessService(ILogger<ScrapperProcessService> logger, IBrowserService browser, IFileService file, IProcessService process)
     {
         _logger = logger;
         Environment = new();
@@ -403,5 +403,11 @@ public class ScrapperProcessService : IScrapperService
                 break;
         }
         return result;
+    }
+
+    public void Dispose()
+    {
+        Stop();
+        _browser.Dispose();
     }
 }
