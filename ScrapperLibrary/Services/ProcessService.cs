@@ -89,11 +89,11 @@ public class ProcessService : IProcessService
         }
         catch (TaskCanceledException)
         {
-            _logger.LogWarning("ProcessStreamStackAsync in WatcherService was cancelled");
+            _logger.LogWarning("ProcessQueueAsync in ProcessService was cancelled");
         }
         catch (Exception e)
         {
-            _logger.LogCritical(e, "ProcessStreamStackAsync in WatcherService finished with error");
+            _logger.LogCritical(e, "ProcessQueueAsync in ProcessService finished with error");
         }
     }
     public void RemoveProcessQueue(ConcurrentQueue<FuncProcess> queue)

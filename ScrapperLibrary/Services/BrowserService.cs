@@ -60,50 +60,62 @@ public sealed class BrowserService : IBrowserService
 
     public void StartBrowser(bool isHeadless = true)
     {
-        //Returns a new BrowserPage
-        ChromeOptions options = new()
+        try
         {
-            //BinaryLocation = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
-        };
+            if (Browser != null)
+            {
+                Browser.Quit();
+            }
 
-        var driverService = ChromeDriverService.CreateDefaultService();
+            //Returns a new BrowserPage
+            ChromeOptions options = new()
+            {
+                //BinaryLocation = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
+            };
 
-        //Change options depending on the case
-        if (isHeadless)
-        {
-            options.AddArguments(new List<string>() { "headless", "disable-gpu", "no-sandbox", "silent-launch", "no-startup-window", "disable-extensions",
+            var driverService = ChromeDriverService.CreateDefaultService();
+
+            //Change options depending on the case
+            if (isHeadless)
+            {
+                options.AddArguments(new List<string>() { "headless", "disable-gpu", "no-sandbox", "silent-launch", "no-startup-window", "disable-extensions",
                 "disable-application-cache", "disable-notifications", "disable-infobars", "log-level=3", "mute-audio" });
 
-            driverService.HideCommandPromptWindow = true;
-        }
-        else
-        {
-            options.AddArguments(new List<string>() { /*"headless",*/ "disable-gpu", "no-sandbox", "disable-extensions",
+                driverService.HideCommandPromptWindow = true;
+            }
+            else
+            {
+                options.AddArguments(new List<string>() { /*"headless",*/ "disable-gpu", "no-sandbox", "disable-extensions",
                 "disable-application-cache", "disable-notifications", "disable-infobars", "log-level=3", "mute-audio" });
+            }
+
+            options.AddUserProfilePreference("profile.default_content_setting_values.images", 2);
+            options.AddUserProfilePreference("profile.default_content_setting_values.cookies", 2);
+            options.AddUserProfilePreference("profile.default_content_setting_values.plugins", 2);
+            options.AddUserProfilePreference("profile.default_content_setting_values.popups", 2);
+            options.AddUserProfilePreference("profile.default_content_setting_values.geolocation", 2);
+            options.AddUserProfilePreference("profile.default_content_setting_values.notifications", 2);
+            options.AddUserProfilePreference("profile.default_content_setting_values.media_stream", 2);
+            options.AddUserProfilePreference("profile.default_content_setting_values.media_stream_mic", 2);
+            options.AddUserProfilePreference("profile.default_content_setting_values.media_stream_camera", 2);
+            options.AddUserProfilePreference("profile.default_content_setting_values.protocol_handlers", 2);
+            options.AddUserProfilePreference("profile.default_content_setting_values.ppapi_broker", 2);
+            options.AddUserProfilePreference("profile.default_content_setting_values.midi_sysex", 2);
+            options.AddUserProfilePreference("profile.default_content_setting_values.push_messaging", 2);
+            options.AddUserProfilePreference("profile.default_content_setting_values.ssl_cert_decisions", 2);
+            options.AddUserProfilePreference("profile.default_content_setting_values.metro_switch_to_desktop", 2);
+            options.AddUserProfilePreference("profile.default_content_setting_values.protected_media_identifier", 2);
+            options.AddUserProfilePreference("profile.default_content_setting_values.app_banner", 2);
+            options.AddUserProfilePreference("profile.default_content_setting_values.site_engagement", 2);
+            options.AddUserProfilePreference("profile.default_content_setting_values.durable_storage", 2);
+
+            Browser = new ChromeDriver(driverService, options);
         }
-
-        options.AddUserProfilePreference("profile.default_content_setting_values.images", 2);
-        options.AddUserProfilePreference("profile.default_content_setting_values.cookies", 2);
-        options.AddUserProfilePreference("profile.default_content_setting_values.plugins", 2);
-        options.AddUserProfilePreference("profile.default_content_setting_values.popups", 2);
-        options.AddUserProfilePreference("profile.default_content_setting_values.geolocation", 2);
-        options.AddUserProfilePreference("profile.default_content_setting_values.notifications", 2);
-        options.AddUserProfilePreference("profile.default_content_setting_values.media_stream", 2);
-        options.AddUserProfilePreference("profile.default_content_setting_values.media_stream_mic", 2);
-        options.AddUserProfilePreference("profile.default_content_setting_values.media_stream_camera", 2);
-        options.AddUserProfilePreference("profile.default_content_setting_values.protocol_handlers", 2);
-        options.AddUserProfilePreference("profile.default_content_setting_values.ppapi_broker", 2);
-        options.AddUserProfilePreference("profile.default_content_setting_values.midi_sysex", 2);
-        options.AddUserProfilePreference("profile.default_content_setting_values.push_messaging", 2);
-        options.AddUserProfilePreference("profile.default_content_setting_values.ssl_cert_decisions", 2);
-        options.AddUserProfilePreference("profile.default_content_setting_values.metro_switch_to_desktop", 2);
-        options.AddUserProfilePreference("profile.default_content_setting_values.protected_media_identifier", 2);
-        options.AddUserProfilePreference("profile.default_content_setting_values.app_banner", 2);
-        options.AddUserProfilePreference("profile.default_content_setting_values.site_engagement", 2);
-        options.AddUserProfilePreference("profile.default_content_setting_values.durable_storage", 2);
-
-
-        Browser = new ChromeDriver(driverService, options);
+        catch (Exception e)
+        {
+            //See if there's an error.
+            _ = e;
+        }
     }
 
     public WebElement? WaitUntilElementExists(By elementLocator, int timeout = 10)

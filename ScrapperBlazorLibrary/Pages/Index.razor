@@ -68,7 +68,7 @@
                             {
                                 if (stream.WaitTimer.TimeLeft <= 0 || stream.WaitTimer.ElapsedOnce)
                                 {
-                                    <td class="pt-2 pb-1 text-center border-end"><strong>Starting...</strong></td>
+                                    <td class="pt-2 pb-1 text-center border-end">Starting...</td>
                                     <td class="pt-2 pb-1 text-center border-end"><strong>...</strong></td>
                                     <td class="pt-2 pb-1 text-center border-end"><strong>...</strong></td>
                                 }
@@ -81,16 +81,18 @@
                             }
                             else if(stream.Status == EnumsModel.ScrapperStatus.Running)
                             {
-                                <td class="pt-2 pb-1 text-center border-end"><strong>@stream.Status</strong></td>
-                                @if (string.IsNullOrEmpty(stream.Scrapper.CurrentGame))
+                                @if (string.IsNullOrEmpty(stream.Scrapper.CurrentGame) && stream.Scrapper.ViewersCount == 0)
                                 {
-                                    <td class="pt-2 pb-1 text-center text-danger border-end">Not Found</td>                                    
+                                    <td class="pt-2 pb-1 text-center border-end"><strong>Loading...</strong></td>
+                                    <td class="pt-2 pb-1 text-center border-end"><strong>...</strong></td>                                    
+                                    <td class="pt-2 pb-1 border-end"><span class="text-end d-flex justify-content-center"><strong>...</strong></span></td>
                                 }
                                 else
                                 {
+                                    <td class="pt-2 pb-1 text-center border-end"><strong>@stream.Status</strong></td>
                                     <td class="pt-2 pb-1 text-center border-end">@stream.Scrapper.CurrentGame</td>
+                                    <td class="pt-2 pb-1 border-end"><span class="text-end d-flex justify-content-center">@String.Format("{0:n0}", stream.Scrapper.ViewersCount)</span></td>
                                 }
-                                <td class="pt-2 pb-1 border-end"><span class="text-end d-flex justify-content-center">@String.Format("{0:n0}", stream.Scrapper.ViewersCount)</span></td>
                             }
                             else
                             {

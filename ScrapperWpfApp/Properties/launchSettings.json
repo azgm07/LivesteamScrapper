@@ -2,7 +2,7 @@
   "profiles": {
     "ScrapperWpfApp": {
       "commandName": "Project",
-      "commandLineArgs": "-thread 2"
+      "commandLineArgs": "-thread 10"
     }
   }
 }

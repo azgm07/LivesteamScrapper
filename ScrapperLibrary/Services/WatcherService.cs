@@ -37,7 +37,7 @@ public class WatcherService : IWatcherService
     private readonly IProcessService _processService;
     private bool isReady;
 
-    public WatcherService(IServiceScopeFactory scopeFactory, ILogger<WatcherService> logger, IFileService file, IProcessService processService, int secondsToWait = 300)
+    public WatcherService(IServiceScopeFactory scopeFactory, ILogger<WatcherService> logger, IFileService file, IProcessService processService, int secondsToWait = 600)
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
@@ -138,6 +138,7 @@ public class WatcherService : IWatcherService
             }
             else
             {
+                ListStreams[index].WaitTimer.Stop();
                 Func<Task> func = new(() => StopStreamScrapperAsync(website, channelPath));
                 FuncProcess funcProcess = new(index, OperationProcess.StopStream, func);
                 _processService.StopQueue.Enqueue(funcProcess);
@@ -169,8 +170,7 @@ public class WatcherService : IWatcherService
             }
             else
             {
-                ListStreams[index].Status = ScrapperStatus.Stopped;
-                ListStreams[index].Scrapper.Stop();
+                ListStreams[index].Dispose();
                 ListStreams.RemoveAt(index);
                 if(saveFile)
                 {
@@ -530,7 +530,7 @@ public class WatcherService : IWatcherService
     }
 }
 
-public sealed class Stream
+public sealed class Stream : IDisposable
 {
     public string Website { get; set; }
     public string Channel { get; set; }
@@ -585,6 +585,14 @@ public sealed class Stream
     private void WaitTimer_ElapsedOnceEvent()
     {
         ElapsedOnceEvent?.Invoke(this);
+    }
+
+    public void Dispose()
+    {
+        Status = ScrapperStatus.Stopped;
+        Scrapper.Stop();
+        WaitTimer?.Dispose();
+        throw new NotImplementedException();
     }
 }
 
