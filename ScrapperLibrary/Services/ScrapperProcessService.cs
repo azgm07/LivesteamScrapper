@@ -96,8 +96,8 @@ public sealed class ScrapperProcessService : IScrapperService
         catch (Exception)
         {
             _logger.LogWarning("Browser page is not ready for {website}/{livestream}", Website, Livestream);
-            IsScrapping = false;
             Stop();
+            IsScrapping = false;
             return IsScrapping;
         }
 

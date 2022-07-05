@@ -333,7 +333,7 @@ public class WatcherService : IWatcherService
 
     public void StopAllStreamScrapper()
     {
-        StartAllStreamEvent?.Invoke();
+        StopAllStreamEvent?.Invoke();
 
         if (!isReady)
         {
