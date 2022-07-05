@@ -35,6 +35,8 @@ public sealed class ScrapperInfoService : IScrapperService
 
     public int ViewersCount { get; private set; }
 
+    public event IScrapperService.StatusChangeEventHandler? StatusChangeEvent;
+
     //Constructor
     public ScrapperInfoService(ILogger<ScrapperInfoService> logger, IBrowserService browser, ITimeService time, IFileService file)
     {
@@ -243,6 +245,7 @@ public sealed class ScrapperInfoService : IScrapperService
     public void Stop()
     {
         Cts.Cancel();
+        StatusChangeEvent?.Invoke();
         IsScrapping = false;
 
         if (_browser != null)

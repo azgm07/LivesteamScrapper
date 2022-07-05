@@ -30,6 +30,9 @@ public sealed class ScrapperProcessService : IScrapperService
 
     public int ViewersCount { get; private set; }
 
+    public event IScrapperService.StatusChangeEventHandler? StatusChangeEvent;
+
+
     //Constructor
     public ScrapperProcessService(ILogger<ScrapperProcessService> logger, IBrowserService browser, IFileService file, IProcessService process)
     {
@@ -177,6 +180,7 @@ public sealed class ScrapperProcessService : IScrapperService
     {
         Cts.Cancel();
         IsScrapping = false;
+        StatusChangeEvent?.Invoke();
 
         if (_browser != null)
         {
@@ -375,11 +379,6 @@ public sealed class ScrapperProcessService : IScrapperService
                 {
                     if (_browser.Browser != null)
                     {
-                        List<string> lines = new();
-                        var l = _browser.Browser.PageSource;
-                        lines.Add(l);
-                        _file.WriteCsv("test", "test.html", lines, true);
-
                         WebElement? webElementOpen = _browser.WaitUntilElementClickable(Environment.OpenLive);
                         if (webElementOpen != null)
                         {

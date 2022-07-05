@@ -21,5 +21,8 @@ namespace ScrapperLibrary.Interfaces
         Task RunTestAsync(EnvironmentModel environment, string livestream, int minutes);
         Task<bool> RunScrapperAsync(EnvironmentModel environment, string livestream, int index = -1);
         void Stop();
+
+        public delegate void StatusChangeEventHandler();
+        public event StatusChangeEventHandler? StatusChangeEvent;
     }
 }

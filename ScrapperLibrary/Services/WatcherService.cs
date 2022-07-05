@@ -57,7 +57,7 @@ public class WatcherService : IWatcherService
     public event IWatcherService.StartStreamEventHandler? StartStreamEvent;
     public event IWatcherService.StopStreamEventHandler? StopStreamEvent;
 
-    public WatcherService(IServiceScopeFactory scopeFactory, ILogger<WatcherService> logger, IFileService file, IProcessService processService, int secondsToWait = 600)
+    public WatcherService(IServiceScopeFactory scopeFactory, ILogger<WatcherService> logger, IFileService file, IProcessService processService, int secondsToWait = 300)
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
@@ -614,6 +614,12 @@ public sealed class Stream : IDisposable
             AutoReset = true
         };
         WaitTimer.ElapsedOnceEvent += WaitTimer_ElapsedOnceEvent;
+        Scrapper.StatusChangeEvent += Scrapper_StatusChangeEvent;
+    }
+
+    private void Scrapper_StatusChangeEvent()
+    {
+        ChangeScrapperStatusEvent?.Invoke(this);
     }
 
     private void WaitTimer_ElapsedOnceEvent()
@@ -623,6 +629,8 @@ public sealed class Stream : IDisposable
 
     public void Dispose()
     {
+        WaitTimer.ElapsedOnceEvent -= WaitTimer_ElapsedOnceEvent;
+        Scrapper.StatusChangeEvent -= Scrapper_StatusChangeEvent;
         Status = ScrapperStatus.Stopped;
         Scrapper.Stop();
         Scrapper.Dispose();
