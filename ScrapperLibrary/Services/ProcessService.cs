@@ -49,7 +49,6 @@ public class ProcessService : IProcessService
                         listFunc.Add(processStop);
                         List<Task> tasksList = new()
                         {
-                            Task.Run(() => RemoveProcessQueue(StartQueue, processStop.Index), CancellationToken.None),
                             Task.Run(() => RemoveProcessQueue(RunQueue, processStop.Index), CancellationToken.None)
                         };
                         for (int j = 0; j < listFunc.Count; j++)

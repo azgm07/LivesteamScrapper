@@ -627,7 +627,6 @@ public sealed class Stream : IDisposable
         Scrapper.Stop();
         Scrapper.Dispose();
         WaitTimer?.Dispose();
-        throw new NotImplementedException();
     }
 }
 

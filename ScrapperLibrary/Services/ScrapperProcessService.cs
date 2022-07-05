@@ -375,13 +375,18 @@ public sealed class ScrapperProcessService : IScrapperService
                 {
                     if (_browser.Browser != null)
                     {
+                        List<string> lines = new();
+                        var l = _browser.Browser.PageSource;
+                        lines.Add(l);
+                        _file.WriteCsv("test", "test.html", lines, true);
+
                         WebElement? webElementOpen = _browser.WaitUntilElementClickable(Environment.OpenLive);
                         if (webElementOpen != null)
                         {
                             webElementOpen.Click();
                         }
 
-                        if (_browser.WaitUntilElementExists(Environment.ReadyCheck) != null)
+                        if (_browser.WaitUntilElementVisible(Environment.ReadyCheck) != null && _browser.WaitUntilElementVisible(Environment.GameContainer) != null)
                         {
                             result = true;
                         }
@@ -392,7 +397,7 @@ public sealed class ScrapperProcessService : IScrapperService
                     }
                 }
                 catch (Exception)
-                {
+                {                    
                     _logger.LogWarning("Prepare scrapper page failed.");
                     result = false;
                 }
