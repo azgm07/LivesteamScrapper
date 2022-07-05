@@ -50,7 +50,7 @@ public sealed class ScrapperProcessService : IScrapperService
 
     private void StartScrapperBrowser()
     {
-        _browser.StartBrowser(false);
+        _browser.StartBrowser();
 
         switch (Environment.Website)
         {
