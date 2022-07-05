@@ -25,17 +25,17 @@ public interface IWatcherService
     public CancellationToken CancellationToken { get; }
 
     public delegate void AddStreamEventHandler(string website, string channelPath);
-    public event AddStreamEventHandler? AddStreamEvent;
+    public static event AddStreamEventHandler? AddStreamEvent;
     public delegate void RemoveStreamEventHandler(string website, string channelPath);
-    public event RemoveStreamEventHandler? RemoveStreamEvent;
+    public static event RemoveStreamEventHandler? RemoveStreamEvent;
     public delegate void StartAllStreamEventHandler();
-    public event StartAllStreamEventHandler? StartAllStreamEvent;
+    public static event StartAllStreamEventHandler? StartAllStreamEvent;
     public delegate void StopAllStreamEventHandler();
-    public event StopAllStreamEventHandler? StopAllStreamEvent;
+    public static event StopAllStreamEventHandler? StopAllStreamEvent;
     public delegate void StartStreamEventHandler(string website, string channelPath);
-    public event StartStreamEventHandler? StartStreamEvent;
+    public static event StartStreamEventHandler? StartStreamEvent;
     public delegate void StopStreamEventHandler(string website, string channelPath);
-    public event StopStreamEventHandler? StopStreamEvent;
+    public static event StopStreamEventHandler? StopStreamEvent;
 }
 
 public class WatcherService : IWatcherService
