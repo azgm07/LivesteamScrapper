@@ -110,7 +110,7 @@ public sealed class BrowserService : IBrowserService
 
             Browser = new ChromeDriver(driverService, options);
 
-            _logger.LogInformation("Browser opened for {url}", OpenedUrl);
+            _logger.LogDebug("Browser instance has started");
         }
         catch (Exception e)
         {
@@ -223,7 +223,7 @@ public sealed class BrowserService : IBrowserService
             if (Browser != null)
             {
                 Browser.Quit();
-                _logger.LogInformation("Browser closed for {url}", OpenedUrl);
+                _logger.LogDebug("Browser instance closed for {url}", OpenedUrl);
             }
         }
         catch (Exception e)
@@ -237,6 +237,7 @@ public sealed class BrowserService : IBrowserService
     {
         if (Browser != null)
         {
+            _logger.LogDebug("Browser instance disposed for {url}", OpenedUrl);
             Browser.Quit();
         }
     }

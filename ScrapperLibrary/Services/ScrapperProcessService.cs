@@ -50,7 +50,7 @@ public sealed class ScrapperProcessService : IScrapperService
 
     private void StartScrapperBrowser()
     {
-        _browser.StartBrowser();
+        _browser.StartBrowser(false);
 
         switch (Environment.Website)
         {
@@ -273,6 +273,7 @@ public sealed class ScrapperProcessService : IScrapperService
             string? currentGame = null;
             int? counter = null;
             bool result;
+            DateTime start = DateTime.Now;
 
             //Failed atempts
             if (_browser.Browser == null)
@@ -326,6 +327,12 @@ public sealed class ScrapperProcessService : IScrapperService
 
                     await Task.Run(() => Hold(), CancellationToken.None);
 
+                    TimeSpan timeSpan = DateTime.Now - start;
+                    if (timeSpan.TotalMilliseconds < (DelayInSeconds * 1000))
+                    {
+                        await Task.Delay((int)((DelayInSeconds * 1000) - timeSpan.TotalMilliseconds), Cts.Token);
+                    }
+
                     if (!Cts.Token.IsCancellationRequested)
                     {
                         Func<Task> func = new(() => RunAsync(index));
@@ -334,14 +341,20 @@ public sealed class ScrapperProcessService : IScrapperService
                     }
                 }
             }
+            else
+            {
+                _ = Task.Run(() => Stop(), CancellationToken.None);
+            }
         }
-        catch (TaskCanceledException e)
+        catch (TaskCanceledException)
         {
             _logger.LogWarning("RunAsync in ScrapperProcessService was cancelled");
+            _ = Task.Run(() => Stop(), CancellationToken.None);
         }
         catch (Exception e)
         {
             _logger.LogCritical(e, "RunAsync in ScrapperProcessService finished with error");
+            _ = Task.Run(() => Stop(), CancellationToken.None);
         }
     }
 
@@ -360,30 +373,22 @@ public sealed class ScrapperProcessService : IScrapperService
             case "facebook":
                 try
                 {
-                    WebElement? webElementReady = _browser.WaitUntilElementExists(Environment.ReadyCheck);
-                    if (_browser.Browser != null && webElementReady == null)
+                    if (_browser.Browser != null)
                     {
                         WebElement? webElementOpen = _browser.WaitUntilElementClickable(Environment.OpenLive);
                         if (webElementOpen != null)
                         {
                             webElementOpen.Click();
-                            if (_browser.WaitUntilElementExists(Environment.ReadyCheck) != null)
-                            {
-                                result = true;
-                            }
-                            else
-                            {
-                                result = false;
-                            }
                         }
-                    }
-                    else if (webElementReady != null)
-                    {
-                        result = true;
-                    }
-                    else
-                    {
-                        result = false;
+
+                        if (_browser.WaitUntilElementExists(Environment.ReadyCheck) != null)
+                        {
+                            result = true;
+                        }
+                        else
+                        {
+                            result = false;
+                        }
                     }
                 }
                 catch (Exception)

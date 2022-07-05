@@ -29,6 +29,7 @@ public class ProcessService : IProcessService
         StartQueue = new();
         StopQueue = new();
         RunQueue = new();
+        Threads = 5;
     }
 
     public async Task ProcessQueueAsync(CancellationToken token)
