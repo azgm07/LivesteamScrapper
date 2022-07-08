@@ -1,12 +1,9 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Scrapper.Models;
-using ScrapperLibrary.Interfaces;
-using System.Collections.Concurrent;
-using System.Timers;
-using static Scrapper.Models.EnumsModel;
+using ScrapperLibrary.Models;
+using static ScrapperLibrary.Models.Enums;
 
-namespace Scrapper.Services;
+namespace ScrapperLibrary.Services;
 
 public interface IWatcherService
 {
@@ -20,7 +17,7 @@ public interface IWatcherService
     public bool StartStream(string website, string channelPath);
     public bool StopStream(string website, string channelPath);
     Task StreamingWatcherAsync(List<string> streams, CancellationToken token);
-    public List<Stream> ListStreams { get; }
+    public List<StreamObject> ListStreams { get; }
     public int SecondsToWait { get; set; }
     public CancellationToken CancellationToken { get; }
 
@@ -40,7 +37,7 @@ public interface IWatcherService
 
 public class WatcherService : IWatcherService
 {
-    public List<Stream> ListStreams { get; private set; }
+    public List<StreamObject> ListStreams { get; private set; }
     public int SecondsToWait { get; set; }
 
     public CancellationToken CancellationToken { get; private set; }
@@ -83,8 +80,8 @@ public class WatcherService : IWatcherService
             int index = ListStreams.FindIndex(stream => stream.Website == website && stream.Channel == channelPath);
             if (index < 0)
             {
-                EnvironmentModel environment = EnvironmentModel.GetEnvironment(website);
-                Stream stream = new(website, channelPath, environment, _scopeFactory, SecondsToWait);
+                StreamEnvironment environment = StreamEnvironment.GetEnvironment(website);
+                StreamObject stream = new(website, channelPath, environment, _scopeFactory, SecondsToWait);
                 if (start)
                 {
                     stream.Status = ScrapperStatus.Waiting;
@@ -434,8 +431,8 @@ public class WatcherService : IWatcherService
             int watcherDelay = 1000;
 
             //Add event
-            Stream.ChangeScrapperStatusEvent += Stream_ChangeScrapperStatusEvent;
-            Stream.ElapsedOnceEvent += Stream_ElapsedOnceEvent;
+            StreamObject.ChangeScrapperStatusEvent += Stream_ChangeScrapperStatusEvent;
+            StreamObject.ElapsedOnceEvent += Stream_ElapsedOnceEvent;
 
             //Check and update
             while (!CancellationToken.IsCancellationRequested)
@@ -443,7 +440,7 @@ public class WatcherService : IWatcherService
                 if (ListStreams.Count > 0)
                 {
                     DateTime start = DateTime.Now;
-                    List<Stream> streamsCopy = new(ListStreams);
+                    List<StreamObject> streamsCopy = new(ListStreams);
 
                     //Debug create new time
                     if (flush)
@@ -522,8 +519,8 @@ public class WatcherService : IWatcherService
         finally
         {
             //Remove events
-            Stream.ChangeScrapperStatusEvent -= Stream_ChangeScrapperStatusEvent;
-            Stream.ElapsedOnceEvent -= Stream_ElapsedOnceEvent;
+            StreamObject.ChangeScrapperStatusEvent -= Stream_ChangeScrapperStatusEvent;
+            StreamObject.ElapsedOnceEvent -= Stream_ElapsedOnceEvent;
 
             isReady = false;
 
@@ -537,7 +534,7 @@ public class WatcherService : IWatcherService
         }
     }
 
-    private void Stream_ElapsedOnceEvent(Stream stream)
+    private void Stream_ElapsedOnceEvent(StreamObject stream)
     {
         if (stream.Status == ScrapperStatus.Waiting)
         {
@@ -546,7 +543,7 @@ public class WatcherService : IWatcherService
         }
     }
 
-    private void Stream_ChangeScrapperStatusEvent(Stream stream)
+    private void Stream_ChangeScrapperStatusEvent(StreamObject stream)
     {
         //Execution
         if (stream.Status == ScrapperStatus.Running)
@@ -560,148 +557,6 @@ public class WatcherService : IWatcherService
         else if (stream.Status == ScrapperStatus.Stopped && stream.WaitTimer != null && stream.WaitTimer.Enabled)
         {
             stream.WaitTimer.Stop();
-        }
-    }
-}
-
-public sealed class Stream : IDisposable
-{
-    public string Website { get; set; }
-    public string Channel { get; set; }
-    public EnvironmentModel Environment { get; set; }
-    private readonly IServiceScope _scope;
-    public IScrapperService Scrapper
-    {
-        get
-        {
-            IScrapperService service = (IScrapperService)_scope.ServiceProvider.GetRequiredService(typeof(IScrapperService));
-            return service;
-
-        }
-    }
-    private ScrapperStatus _status;
-    public ScrapperStatus Status
-    {
-        get
-        {
-            return _status;
-        }
-        set
-        {
-            _status = value;
-            ChangeScrapperStatusEvent?.Invoke(this);
-        }
-    }
-    public TimerPlus WaitTimer { get; set; }
-
-    public delegate void ChangeScrapperStatusEventHandler(Stream stream);
-
-    public static event ChangeScrapperStatusEventHandler? ChangeScrapperStatusEvent;
-
-    public delegate void ElapsedOnceEventHandler(Stream stream);
-
-    public static event ElapsedOnceEventHandler? ElapsedOnceEvent;
-
-    public Stream(string website, string channel, EnvironmentModel environment, IServiceScopeFactory scopeService, int timer)
-    {
-        Website = website;
-        Channel = channel;
-        Environment = environment;
-        _scope = scopeService.CreateScope();
-        Status = ScrapperStatus.Stopped;
-        WaitTimer = new(timer * 1000)
-        {
-            AutoReset = true
-        };
-        WaitTimer.ElapsedOnceEvent += WaitTimer_ElapsedOnceEvent;
-        Scrapper.StatusChangeEvent += Scrapper_StatusChangeEvent;
-    }
-
-    private void Scrapper_StatusChangeEvent()
-    {
-        ChangeScrapperStatusEvent?.Invoke(this);
-    }
-
-    private void WaitTimer_ElapsedOnceEvent()
-    {
-        ElapsedOnceEvent?.Invoke(this);
-    }
-
-    public void Dispose()
-    {
-        WaitTimer.ElapsedOnceEvent -= WaitTimer_ElapsedOnceEvent;
-        Scrapper.StatusChangeEvent -= Scrapper_StatusChangeEvent;
-        Status = ScrapperStatus.Stopped;
-        Scrapper.Stop();
-        Scrapper.Dispose();
-        WaitTimer?.Dispose();
-    }
-}
-
-public sealed class TimerPlus : System.Timers.Timer, IDisposable
-{
-    private DateTime m_dueTime;
-    private bool _elapsedOnce;
-    public bool ElapsedOnce
-    {
-        get
-        {
-            return _elapsedOnce;
-        }
-        set
-        {
-            _elapsedOnce = value;
-            if (value)
-            {
-                ElapsedOnceEvent?.Invoke();
-            }
-        }
-    }
-    public TimerPlus(int timer) : base(timer) => this.Elapsed += ElapsedAction;
-
-    public delegate void ElapsedOnceEventHandler();
-
-    public event ElapsedOnceEventHandler? ElapsedOnceEvent;
-
-    public new void Dispose()
-    {
-        this.Elapsed -= ElapsedAction;
-        base.Dispose();
-    }
-
-    public double TimeLeft
-    {
-        get
-        {
-            if (this.Enabled)
-            {
-                return (this.m_dueTime - DateTime.Now).TotalMilliseconds;
-            }
-            else
-            {
-                return 0;
-            }
-        }
-    }
-    public new void Start()
-    {
-        this.m_dueTime = DateTime.Now.AddMilliseconds(this.Interval);
-        ElapsedOnce = false;
-        base.Start();
-    }
-
-    public new void Stop()
-    {
-        ElapsedOnce = false;
-        base.Stop();
-    }
-
-    private void ElapsedAction(object? sender, System.Timers.ElapsedEventArgs e)
-    {
-        if (this.AutoReset)
-        {
-            ElapsedOnce = true;
-            this.m_dueTime = DateTime.Now.AddMilliseconds(this.Interval);
         }
     }
 }

@@ -1,22 +1,22 @@
 ﻿using Microsoft.Extensions.Logging;
 using OpenQA.Selenium;
-using Scrapper.Models;
-using Scrapper.Utils;
-using ScrapperLibrary.Interfaces;
+using ScrapperLibrary.Models;
+using ScrapperLibrary.Utils;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Text;
 using System.Text.RegularExpressions;
-using static Scrapper.Models.EnumsModel;
+using static ScrapperLibrary.Models.Enums;
+using ScrapperLibrary.Interfaces;
 
-namespace Scrapper.Services;
+namespace ScrapperLibrary.Services;
 
 public sealed class ScrapperInfoService : IScrapperService
 {
     private readonly ILogger<ScrapperInfoService> _logger;
 
     public bool IsScrapping { get; private set; }
-    public EnvironmentModel Environment { get; private set; }
+    public StreamEnvironment Environment { get; private set; }
     public int MaxFails { get; private set; }
     public CancellationTokenSource Cts { get; private set; }
     public int DelayInSeconds { get; set; }
@@ -160,7 +160,7 @@ public sealed class ScrapperInfoService : IScrapperService
         _logger.LogInformation("Console Stopped for {website}/{livestream}", Website, Livestream);
     }
 
-    public async Task RunTestAsync(EnvironmentModel environment, string livestream, int minutes)
+    public async Task RunTestAsync(StreamEnvironment environment, string livestream, int minutes)
     {
         Environment = environment;
         Website = Environment.Website;
@@ -182,7 +182,7 @@ public sealed class ScrapperInfoService : IScrapperService
         }
 
     }
-    public async Task<bool> RunScrapperAsync(EnvironmentModel environment, string livestream, int index = -1)
+    public async Task<bool> RunScrapperAsync(StreamEnvironment environment, string livestream, int index = -1)
     {
         if (!IsScrapping)
         {

@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 
-namespace Scrapper.Services;
+namespace ScrapperLibrary.Services;
 
 public interface IProcessService
 {

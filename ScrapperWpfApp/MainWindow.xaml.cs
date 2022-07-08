@@ -16,8 +16,8 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Scrapper.Models;
-using Scrapper.Services;
+using ScrapperLibrary.Models;
+using ScrapperLibrary.Services;
 using ScrapperBlazorLibrary.Data;
 
 namespace ScrapperWpfApp

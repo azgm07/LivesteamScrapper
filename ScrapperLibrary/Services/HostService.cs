@@ -1,8 +1,8 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Scrapper.Models;
+using ScrapperLibrary.Models;
 
-namespace Scrapper.Services
+namespace ScrapperLibrary.Services
 {
     public class HostService : BackgroundService
     {

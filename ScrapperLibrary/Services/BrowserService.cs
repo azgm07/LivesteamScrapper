@@ -4,7 +4,7 @@ using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
 using SeleniumExtras.WaitHelpers;
 
-namespace Scrapper.Services;
+namespace ScrapperLibrary.Services;
 
 public interface IBrowserService : IDisposable
 {

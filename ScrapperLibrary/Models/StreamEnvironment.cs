@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using OpenQA.Selenium;
 
-namespace Scrapper.Models;
+namespace ScrapperLibrary.Models;
 
 public interface IEnvironmentInterface
 {
@@ -20,7 +20,7 @@ public interface IEnvironmentInterface
     public abstract By ReadyCheck { get; set; }
 }
 
-public class EnvironmentModel : IEnvironmentInterface
+public class StreamEnvironment : IEnvironmentInterface
 {
     public string Http { get; set; }
     public string Website { get; set; }
@@ -38,7 +38,7 @@ public class EnvironmentModel : IEnvironmentInterface
 
     protected readonly IConfiguration _config;
 
-    public EnvironmentModel()
+    public StreamEnvironment()
     {
         Http = string.Empty;
         Website = string.Empty;
@@ -64,7 +64,7 @@ public class EnvironmentModel : IEnvironmentInterface
         Youtube
     }
 
-    public static EnvironmentModel GetEnvironment(string website = "")
+    public static StreamEnvironment GetEnvironment(string website = "")
     {
         return website.ToLower() switch
         {
@@ -72,11 +72,11 @@ public class EnvironmentModel : IEnvironmentInterface
             "facebook" => new Facebook(),
             "twitch" => new Twitch(),
             "youtube" => new Youtube(),
-            _ => new EnvironmentModel(),
+            _ => new StreamEnvironment(),
         };
     }
 }
-public class Booyah : EnvironmentModel
+public class Booyah : StreamEnvironment
 {
     public Booyah() : base()
     {
@@ -96,7 +96,7 @@ public class Booyah : EnvironmentModel
     }
 }
 
-public class Facebook : EnvironmentModel
+public class Facebook : StreamEnvironment
 {
     public Facebook() : base()
     {
@@ -116,7 +116,7 @@ public class Facebook : EnvironmentModel
     }
 }
 
-public class Twitch : EnvironmentModel
+public class Twitch : StreamEnvironment
 {
     public Twitch() : base()
     {
@@ -136,7 +136,7 @@ public class Twitch : EnvironmentModel
     }
 }
 
-public class Youtube : EnvironmentModel
+public class Youtube : StreamEnvironment
 {
     public Youtube() : base()
     {

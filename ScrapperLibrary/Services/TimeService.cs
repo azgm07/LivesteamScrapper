@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 
-namespace Scrapper.Services;
+namespace ScrapperLibrary.Services;
 
 public interface ITimeService
 {

@@ -15,7 +15,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ScrapperBlazorLibrary", "Sc
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ScrapperWpfApp", "ScrapperWpfApp\ScrapperWpfApp.csproj", "{34A8D138-C2DF-4B30-A3E9-F4E1BE205F27}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScrapperLibrary", "ScrapperLibrary\ScrapperLibrary.csproj", "{622855FB-ADC7-40D9-AA31-34BF12CE92F1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ScrapperLibrary", "ScrapperLibrary\ScrapperLibrary.csproj", "{622855FB-ADC7-40D9-AA31-34BF12CE92F1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Scrapper.Services;
+using ScrapperLibrary.Services;
 using ScrapperLibrary.Interfaces;
 
 namespace ScrapperLibrary.Services

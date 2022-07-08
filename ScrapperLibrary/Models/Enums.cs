@@ -1,6 +1,6 @@
-namespace Scrapper.Models;
+namespace ScrapperLibrary.Models;
 
-public class EnumsModel
+public class Enums
 {
     public enum ScrapperMode
     {
@@ -9,6 +9,14 @@ public class EnumsModel
     }
 
     public enum ScrapperStatus
+    {
+        Stopped,
+        Running,
+        Waiting,
+        NotFound
+    }
+
+    public enum StreamStatus
     {
         Stopped,
         Running,

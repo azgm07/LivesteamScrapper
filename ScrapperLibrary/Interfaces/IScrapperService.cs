@@ -1,4 +1,4 @@
-﻿using Scrapper.Models;
+﻿using ScrapperLibrary.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,8 +18,8 @@ namespace ScrapperLibrary.Interfaces
         string Website { get; }
         int DelayInSeconds { get; }
 
-        Task RunTestAsync(EnvironmentModel environment, string livestream, int minutes);
-        Task<bool> RunScrapperAsync(EnvironmentModel environment, string livestream, int index = -1);
+        Task RunTestAsync(StreamEnvironment environment, string livestream, int minutes);
+        Task<bool> RunScrapperAsync(StreamEnvironment environment, string livestream, int index = -1);
         void Stop();
 
         public delegate void StatusChangeEventHandler();

@@ -1,11 +1,11 @@
-namespace Scrapper.Models;
+namespace ScrapperLibrary.Models;
 
-public class ChatMessageModel
+public class ChatMessage
 {
     public string Author { get; set; }
     public string Content { get; set; }
 
-    public ChatMessageModel()
+    public ChatMessage()
     {
         Author = "";
         Content = "";

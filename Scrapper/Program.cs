@@ -3,7 +3,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Scrapper.Models;
 using Scrapper.Services;
-using ScrapperLibrary.Services;
+using Library.Services;
 
 namespace Scrapper.Main;
 public static class Program
@@ -27,7 +27,7 @@ public static class Program
         
         var watcher = app.Services.GetRequiredService<IWatcherService>();
 
-        Task task = Task.Run(async () =>
+        _ = Task.Run(async () =>
         {
             ILogger _logger = app.Services.GetRequiredService<ILogger<HostService>>();
             _logger.LogInformation("Starting main activities in 3 seconds...");

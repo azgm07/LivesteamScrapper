@@ -2,13 +2,13 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Scrapper.Services;
-using ScrapperLibrary.Interfaces;
+using ScrapperLibrary.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using ScrapperLibrary.Interfaces;
 
 namespace ScrapperBlazorLibrary.Services
 {

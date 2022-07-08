@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Scrapper.Utils
+namespace ScrapperLibrary.Utils
 {
     public static class ServiceUtils
     {

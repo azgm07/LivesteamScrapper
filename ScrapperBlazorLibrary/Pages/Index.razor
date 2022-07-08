@@ -2,8 +2,8 @@
 
 <PageTitle>Index</PageTitle>
 
-@using Scrapper.Services
-@using Scrapper.Models
+@using ScrapperLibrary.Services
+@using ScrapperLibrary.Models
 @using System.Collections.Concurrent
 @using System.Timers
 @using System.Text.RegularExpressions
@@ -21,7 +21,7 @@
                 <input type="text" style="min-width: 120px;" class="form-control" placeholder="Stream" @bind=ChannelAdd>
                 <select class="form-control" style="min-width: 120px;" @bind="WebsiteAdd">
                     <option selected value="">Choose...</option>
-                    @foreach (var name in Enum.GetNames(typeof(EnvironmentModel.Websites)))
+                    @foreach (var name in Enum.GetNames(typeof(StreamEnvironment.Websites)))
                     {
                         <option value="@name.ToLower()">@name</option>
                     }
@@ -64,7 +64,7 @@
                         <tr>
                             <td class="pt-2 pb-1 text-center border-end">@(char.ToUpper(stream.Website[0]) + stream.Website.Substring(1))</td>
                             <td class="pt-2 pb-1 text-center border-end">@(char.ToUpper(stream.Channel[0]) + stream.Channel.Substring(1))</td>
-                            @if (stream.Status == EnumsModel.ScrapperStatus.Waiting)
+                            @if (stream.Status == Enums.ScrapperStatus.Waiting)
                             {
                                 if (stream.WaitTimer.TimeLeft <= 0 || stream.WaitTimer.ElapsedOnce)
                                 {
@@ -79,7 +79,7 @@
                                     <td class="pt-2 pb-1 text-center text-black-50 border-end">Not Streaming</td>
                                 }
                             }
-                            else if(stream.Status == EnumsModel.ScrapperStatus.Running)
+                            else if(stream.Status == Enums.ScrapperStatus.Running)
                             {
                                 @if (string.IsNullOrEmpty(stream.Scrapper.CurrentGame) && stream.Scrapper.ViewersCount == 0)
                                 {
@@ -106,7 +106,7 @@
                                         X
                                     </button>
 
-                                    @if(stream.Status == EnumsModel.ScrapperStatus.Running || (stream.Status == EnumsModel.ScrapperStatus.Waiting))
+                                    @if(stream.Status == Enums.ScrapperStatus.Running || (stream.Status == Enums.ScrapperStatus.Waiting))
                                     {
                                         <button type="button" class="btn btn-danger ms-1" @onclick="() => StopStream(stream.Website, stream.Channel)" disabled="@DisableAllButtons">
                                             Stop
@@ -131,7 +131,7 @@
 
 
 @code {
-    private BlockingCollection<Stream> streams = new();
+    private BlockingCollection<StreamObject> streams = new();
 
     private string WebsiteAdd {get;set;} = "";
     private string ChannelAdd {get;set;} = "";
@@ -146,7 +146,7 @@
         if(debug)
         {
             IServiceScopeFactory mockScope = new Mock<IServiceScopeFactory>().Object;
-            Stream mockStream = new Stream("Test", "Testing", new EnvironmentModel(), mockScope, 10);
+            StreamObject mockStream = new StreamObject("Test", "Testing", new StreamEnvironment(), mockScope, 10);
             streams.Add(mockStream);            
             streams.Add(mockStream);            
             streams.Add(mockStream);            
@@ -161,8 +161,8 @@
     {
         while (true)
         {
-            List<Stream> localList = WatcherService.ListStreams;
-            streams = new BlockingCollection<Stream>(new ConcurrentQueue<Stream>(localList));;
+            List<StreamObject> localList = WatcherService.ListStreams;
+            streams = new BlockingCollection<StreamObject>(new ConcurrentQueue<StreamObject>(localList));;
             await InvokeAsync(() => { StateHasChanged(); });
             await Task.Delay(1000);            
         }
