@@ -54,7 +54,7 @@ namespace ScrapperLibrary.Controllers
                             for (int failedAtempts = 0; failedAtempts < _maxFails; failedAtempts++)
                             {
                                 //Local variables
-                                Task<int?> taskViewers = Task.Run(() => ReadViewerCounter(driver), token);
+                                Task<int?> taskViewers = Task.Run(() => ReadViewers(driver), token);
                                 Task<string?> taskGame = Task.Run(() => ReadCurrentGame(driver), token);
 
                                 viewers = await taskViewers;
@@ -158,29 +158,29 @@ namespace ScrapperLibrary.Controllers
             return result;
         }
 
-        private int? ReadViewerCounter(WebDriver driver)
+        private int? ReadViewers(WebDriver driver)
         {
             try
             {
                 //Retrive new comments
                 int viewersCount = 0;
-                var counter = driver.FindElement(_environment.CounterContainer);
-                string counterText = counter.GetAttribute("textContent");
+                var viewers = driver.FindElement(_environment.CounterContainer);
+                string viewersText = viewers.GetAttribute("textContent");
 
                 //Treat different types of text
-                if (counterText.IndexOf("mil") != -1 || counterText.IndexOf("K") != -1)
+                if (viewersText.IndexOf("mil") != -1 || viewersText.IndexOf("K") != -1)
                 {
-                    counterText = Regex.Replace(counterText, "[^0-9,.]", "");
-                    counterText = counterText.Replace(".", ",");
-                    if (decimal.TryParse(counterText, out decimal result))
+                    viewersText = Regex.Replace(viewersText, "[^0-9,.]", "");
+                    viewersText = viewersText.Replace(".", ",");
+                    if (decimal.TryParse(viewersText, out decimal result))
                     {
                         viewersCount = (int)(result * 1000);
                     }
                 }
                 else
                 {
-                    counterText = Regex.Replace(counterText, "[^0-9]", "");
-                    if (int.TryParse(counterText, out int result))
+                    viewersText = Regex.Replace(viewersText, "[^0-9]", "");
+                    if (int.TryParse(viewersText, out int result))
                     {
                         viewersCount = result;
                     }
@@ -190,7 +190,7 @@ namespace ScrapperLibrary.Controllers
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "ReadViewerCounter");
+                _logger.LogError(e, "ReadViewers");
                 return null;
             }
         }
