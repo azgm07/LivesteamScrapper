@@ -15,24 +15,22 @@ namespace ScrapperLibrary.Controllers
     public class TrackerController
     {
         public TrackerResponse LastResponse { get; private set; }
+        public StreamEnvironment CurrentEnvironment { get; private set; }
+        public string Channel { get; private set; }
 
         private readonly ILogger<TrackerController> _logger;
-        private readonly IFileService _fileService;
         private readonly DriverController _driver;
-        private readonly StreamEnvironment _environment;
         private readonly string _url;
         private readonly int _maxFails;
-        private readonly string _channel;
 
-        public TrackerController(StreamEnvironment environment, string channel, ILogger<TrackerController> logger, ILoggerFactory loggerFactory, IFileService fileService, int maxFails = 3)
+        public TrackerController(StreamEnvironment environment, string channel, ILoggerFactory loggerFactory, int maxFails = 3)
         {
             LastResponse = new();
-            _environment = environment;
-            _channel = channel;
+            CurrentEnvironment = environment;
+            Channel = channel;
             _url = $"{environment.Http}{channel}/live";
 
-            _logger = logger;
-            _fileService = fileService;
+            _logger = loggerFactory.CreateLogger<TrackerController>();
             _driver = new(loggerFactory.CreateLogger<DriverController>());
             _maxFails = maxFails;
         }
@@ -79,7 +77,7 @@ namespace ScrapperLibrary.Controllers
                             {                                
                                 response.CurrentGame = currentGame;
                                 response.CurrentViewers = viewers.Value;
-
+                                LastResponse = response;
                                 return response;
                             }
                         }
@@ -88,21 +86,22 @@ namespace ScrapperLibrary.Controllers
                             return null;
                         }
                     }
+                    else
+                    {
+                        return null;
+                    }
                 }
             }
             catch (Exception)
             {
                 return null;
             }
-
-            LastResponse = response;
-            return response;
         }
 
         private bool OpenPage(WebDriver driver)
         {
             driver.Navigate().GoToUrl(_url);
-            if (_environment.Selector != null && _driver.WaitUntilElementExists(driver, _environment.Selector) == null)
+            if (CurrentEnvironment.Selector != null && _driver.WaitUntilElementExists(driver, CurrentEnvironment.Selector) == null)
             {
                 return false;
             }
@@ -115,21 +114,21 @@ namespace ScrapperLibrary.Controllers
         private bool PreparePage(WebDriver driver)
         {
             bool result = false;
-            switch (_environment.Website)
+            switch (CurrentEnvironment.Website)
             {
                 case "facebook":
                     try
                     {
                         if (driver != null)
                         {
-                            WebElement? webElementOpen = _driver.WaitUntilElementClickable(driver, _environment.OpenLive);
+                            WebElement? webElementOpen = _driver.WaitUntilElementClickable(driver, CurrentEnvironment.OpenLive);
                             if (webElementOpen != null)
                             {
                                 webElementOpen.Click();
                             }
 
-                            if (_driver.WaitUntilElementVisible(driver, _environment.ReadyCheck) != null &&
-                                _driver.WaitUntilElementVisible(driver, _environment.GameContainer) != null)
+                            if (_driver.WaitUntilElementVisible(driver, CurrentEnvironment.ReadyCheck) != null &&
+                                _driver.WaitUntilElementVisible(driver, CurrentEnvironment.GameContainer) != null)
                             {
                                 result = true;
                             }
@@ -164,7 +163,7 @@ namespace ScrapperLibrary.Controllers
             {
                 //Retrive new comments
                 int viewersCount = 0;
-                var viewers = driver.FindElement(_environment.CounterContainer);
+                var viewers = driver.FindElement(CurrentEnvironment.CounterContainer);
                 string viewersText = viewers.GetAttribute("textContent");
 
                 //Treat different types of text
@@ -200,14 +199,14 @@ namespace ScrapperLibrary.Controllers
             try
             {
                 //Retrive new comments
-                var game = driver.FindElement(_environment.GameContainer);
+                var game = driver.FindElement(CurrentEnvironment.GameContainer);
                 string currentGame = game.GetAttribute("textContent");
 
                 return currentGame;
             }
             catch (Exception)
             {
-                _logger.LogWarning("Element for Current Game was not found. ({locator})", _environment.GameContainer);
+                _logger.LogWarning("Element for Current Game was not found. ({locator})", CurrentEnvironment.GameContainer);
                 return null;
             }
         }
