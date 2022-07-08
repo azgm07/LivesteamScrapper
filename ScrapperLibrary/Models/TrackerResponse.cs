@@ -9,7 +9,6 @@ namespace ScrapperLibrary.Models
 {
     public class TrackerResponse
     {
-        public StreamStatus StreamStatus { get; set; }
         public string? CurrentGame { get; set; }
         public int CurrentViewers { get; set; }
 
