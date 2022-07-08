@@ -19,6 +19,7 @@ using Microsoft.Extensions.Hosting;
 using ScrapperLibrary.Models;
 using ScrapperLibrary.Services;
 using ScrapperBlazorLibrary.Data;
+using ScrapperLibrary.Interfaces;
 
 namespace ScrapperWpfApp
 {
@@ -37,7 +38,7 @@ namespace ScrapperWpfApp
 
             Resources.Add("serviceCollection", App.ServiceProvider);
 
-            List<string> lines = _fileService.ReadCsv("config", "streams.txt");
+            List<string> lines = _fileService.ReadFile("config", "streams.txt");
 
             if (!lines.Any())
             {

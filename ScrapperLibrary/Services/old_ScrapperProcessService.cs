@@ -2,8 +2,6 @@
 using OpenQA.Selenium;
 using ScrapperLibrary.Models;
 using ScrapperLibrary.Utils;
-using System.Collections.Concurrent;
-using System.Collections.ObjectModel;
 using System.Text;
 using System.Text.RegularExpressions;
 using static ScrapperLibrary.Models.Enums;
@@ -11,9 +9,9 @@ using ScrapperLibrary.Interfaces;
 
 namespace ScrapperLibrary.Services;
 
-public sealed class ScrapperInfoService : IScrapperService
+public sealed class ScrapperProcessService : IScrapperService
 {
-    private readonly ILogger<ScrapperInfoService> _logger;
+    private readonly ILogger<ScrapperProcessService> _logger;
 
     public bool IsScrapping { get; private set; }
     public StreamEnvironment Environment { get; private set; }
@@ -23,11 +21,8 @@ public sealed class ScrapperInfoService : IScrapperService
 
 
     private readonly IBrowserService _browser;
-    private readonly ITimeService _time;
     private readonly IFileService _file;
-
-    private System.Timers.Timer timerTask;
-    private bool isReloading;
+    private readonly IProcessService _processService;
 
     public string Website { get; private set; }
     public string Livestream { get; private set; }
@@ -37,8 +32,9 @@ public sealed class ScrapperInfoService : IScrapperService
 
     public event IScrapperService.StatusChangeEventHandler? StatusChangeEvent;
 
+
     //Constructor
-    public ScrapperInfoService(ILogger<ScrapperInfoService> logger, IBrowserService browser, ITimeService time, IFileService file)
+    public ScrapperProcessService(ILogger<ScrapperProcessService> logger, IBrowserService browser, IFileService file, IProcessService process)
     {
         _logger = logger;
         Environment = new();
@@ -47,11 +43,9 @@ public sealed class ScrapperInfoService : IScrapperService
         CurrentGame = "";
         ViewersCount = 0;
         _browser = browser;
-        _time = time;
         _file = file;
-        timerTask = new();
+        _processService = process;
         Cts = new();
-        isReloading = false;
         IsScrapping = false;
         MaxFails = 3;
         DelayInSeconds = 60;
@@ -82,7 +76,7 @@ public sealed class ScrapperInfoService : IScrapperService
 
             if (_browser.IsReady && _browser.Browser != null)
             {
-                if(PrepareScrapperPage())
+                if (PrepareScrapperPage())
                 {
                     _logger.LogInformation("Browser page is ready for {website}/{livestream}", Website, Livestream);
                     IsScrapping = true;
@@ -90,12 +84,14 @@ public sealed class ScrapperInfoService : IScrapperService
                 else
                 {
                     _logger.LogWarning("Browser page is not ready for {website}/{livestream}", Website, Livestream);
+                    Stop();
                     IsScrapping = false;
                 }
             }
             else
             {
                 _logger.LogWarning("Browser page is not ready for {website}/{livestream}", Website, Livestream);
+                Stop();
                 IsScrapping = false;
             }
             return IsScrapping;
@@ -103,85 +99,28 @@ public sealed class ScrapperInfoService : IScrapperService
         catch (Exception)
         {
             _logger.LogWarning("Browser page is not ready for {website}/{livestream}", Website, Livestream);
+            Stop();
             IsScrapping = false;
             return IsScrapping;
         }
 
     }
 
-    private void ReloadScrapper()
+    private void CreateInfoLog()
     {
-        //ReloadBrowser
-        try
-        {
-            isReloading = true;
+        StringBuilder sb = new();
+        sb.Append($"Stream: {Website}/{Livestream} | ");
+        sb.Append($"Playing: {CurrentGame} | ");
+        sb.Append($"Viewers Count: {ViewersCount}");
 
-            if (_browser.Browser == null)
-            {
-                StartScrapperBrowser();
-            }
-            else
-            {
-                _browser.ReloadBrowserPage(Environment.Selector);
-            }
-
-            if (_browser.IsReady && _browser.Browser != null && !PrepareScrapperPage())
-            {
-                _logger.LogWarning("Browser page is not ready for {website}/{livestream}", Website, Livestream);
-            }
-
-            isReloading = false;
-        }
-        catch (Exception)
-        {
-            _logger.LogWarning("Browser page is not ready for {website}/{livestream}", Website, Livestream);
-            isReloading = false;
-        }
-
+        _logger.LogInformation("{message}", sb.ToString());
     }
 
-    private async Task CreateInfoLogAsync(CancellationToken token, int delaySeconds = 30)
+    public Task RunTestAsync(StreamEnvironment environment, string livestream, int minutes)
     {
-        _logger.LogInformation("Console Started for {website}/{livestream}", Website, Livestream);
-        await Task.Delay(delaySeconds * 1000, token);
-
-        while (!token.IsCancellationRequested)
-        {
-            StringBuilder sb = new();
-            sb.Append($"Stream: {Website}/{Livestream} | ");
-            sb.Append($"Playing: {CurrentGame} | ");
-            sb.Append($"Viewers Count: {ViewersCount}");
-
-            _logger.LogInformation("{message}", sb.ToString());
-
-            await Task.Delay(delaySeconds * 1000).ConfigureAwait(false);
-        }
-
-        _logger.LogInformation("Console Stopped for {website}/{livestream}", Website, Livestream);
+        throw new NotImplementedException();
     }
 
-    public async Task RunTestAsync(StreamEnvironment environment, string livestream, int minutes)
-    {
-        Environment = environment;
-        Website = Environment.Website;
-        Livestream = livestream;
-        bool hasStarted = await Task.Run(() => Start());
-        if (hasStarted)
-        {
-            StartTimerTasksCancellation(minutes);
-
-            List<Task> tasks = new()
-            {
-                RunDelayedAsync(Cts.Token),
-
-                //Console Tasks
-                CreateInfoLogAsync(Cts.Token, 30)
-            };
-
-            await Task.WhenAll(tasks);
-        }
-
-    }
     public async Task<bool> RunScrapperAsync(StreamEnvironment environment, string livestream, int index = -1)
     {
         if (!IsScrapping)
@@ -194,14 +133,14 @@ public sealed class ScrapperInfoService : IScrapperService
 
             if (hasStarted)
             {
-                List<Task> tasks = new()
+                await Task.Run(() =>
                 {
-                    RunDelayedAsync(Cts.Token),
-                    //Console Tasks
-                    CreateInfoLogAsync(Cts.Token, 30)
-                };
+                    Func<Task> func = new(() => RunAsync(index));
+                    FuncProcess funcProcess = new(index, OperationProcess.RunScrapper, func);
+                    _processService.RunQueue.Enqueue(funcProcess);
+                });
 
-                _ = tasks;
+                IsScrapping = true;
 
                 return true;
             }
@@ -219,7 +158,11 @@ public sealed class ScrapperInfoService : IScrapperService
 
     private bool Start()
     {
-        Cts = new CancellationTokenSource();
+        if (Cts.IsCancellationRequested)
+        {
+            Cts = new CancellationTokenSource();
+        }
+
         bool isOpen = OpenScrapper();
 
         if (isOpen)
@@ -229,24 +172,15 @@ public sealed class ScrapperInfoService : IScrapperService
         else
         {
             _logger.LogWarning("Scrapper failed to start for {website}/{livestream}", Website, Livestream);
-            Stop();
         }
         return isOpen;
-    }
-
-    private void Hold()
-    {
-        if (_browser != null)
-        {
-            _browser.StopBrowserPage();
-        }
     }
 
     public void Stop()
     {
         Cts.Cancel();
-        StatusChangeEvent?.Invoke();
         IsScrapping = false;
+        StatusChangeEvent?.Invoke();
 
         if (_browser != null)
         {
@@ -259,16 +193,12 @@ public sealed class ScrapperInfoService : IScrapperService
         }
     }
 
-    private void StartTimerTasksCancellation(int minutes)
+    private void Hold()
     {
-        double totalMsec = minutes * 60000;
-        timerTask = new System.Timers.Timer(totalMsec);
-        timerTask.Elapsed += (sender, e) =>
+        if (_browser != null)
         {
-            Stop();
-            timerTask.Stop();
-        };
-        timerTask.Start();
+            _browser.StopBrowserPage();
+        }
     }
 
     private int? ReadViewerCounter()
@@ -340,116 +270,102 @@ public sealed class ScrapperInfoService : IScrapperService
         }
     }
 
-    private async Task RunDelayedAsync(CancellationToken token)
+    private async Task RunAsync(int index)
     {
-        //Loop scrapping per sec.
-        _time.Start("RunViewerScrapper");
-
-        //Flush tasks
-        List<Task> tasksFlush = new();
-
-        List<int> listCounter = new();
-        string? currentGame = null;
-        int? counter = null;
-
-        //Failed atempts
-        int failedAtempts = 0;
-
-        //Main loop
-        while (!token.IsCancellationRequested)
+        try
         {
+            string? currentGame = null;
+            int? counter = null;
+            bool result;
             DateTime start = DateTime.Now;
 
-            //Break if too many fails
-            if (failedAtempts >= MaxFails)
+            //Failed atempts
+            if (_browser.Browser == null)
             {
-                _logger.LogWarning("Scrapper failed and has to stop for {website}/{livestream}", Website, Livestream);
-                break;
-            }
-
-            //Local variables
-            counter = await Task.Run(() => ReadViewerCounter(), CancellationToken.None);
-            currentGame = await Task.Run(() => ReadCurrentGame(), CancellationToken.None);
-
-            if (counter.HasValue && counter > 0 && !string.IsNullOrEmpty(currentGame))
-            {
-                listCounter.Add(counter.Value);
-                failedAtempts = 0;
+                result = await Task.Run(() => OpenScrapper(), Cts.Token);
             }
             else
             {
-                failedAtempts++;
-                await Task.Delay(5000, CancellationToken.None);
-                continue;
+                result = true;
             }
 
-            //Flush data
-            Task task = Task.Run(() =>
+            //Main loop
+            if (result)
             {
-                string max = string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", currentGame, ",", listCounter.Max().ToString());
-                List<string> newList = new()
+                for (int failedAtempts = 0; failedAtempts < MaxFails; failedAtempts++)
                 {
-                    max
-                };
-                WriteData(newList, Environment.Website, Livestream, "counters");
-                listCounter = new List<int>();
-            }, CancellationToken.None);
+                    //Local variables
+                    counter = await Task.Run(() => ReadViewerCounter(), Cts.Token);
+                    currentGame = await Task.Run(() => ReadCurrentGame(), Cts.Token);
 
-            tasksFlush.Add(task);
+                    if (counter.HasValue && counter <= 0 || string.IsNullOrEmpty(currentGame))
+                    {
+                        failedAtempts++;
+                        await Task.Delay(5000, Cts.Token);
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
 
-            //Hold 1 min to continue than reload
-            Task taskHold = Task.Run(() =>
-            {
-                Hold();
-            }, CancellationToken.None);
-            await taskHold;
+                if (counter.HasValue && counter <= 0 || string.IsNullOrEmpty(currentGame))
+                {
+                    _logger.LogWarning("Scrapper failed and has to stop for {website}/{livestream}", Website, Livestream);
+                    _ = Task.Run(() => Stop(), CancellationToken.None);
+                }
+                else
+                {
+                    //Flush data
+                    Task task = Task.Run(() =>
+                    {
+                        string result = string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", currentGame, ",", counter);
+                        List<string> newList = new()
+                        {
+                        result
+                        };
+                        WriteData(newList, Environment.Website, Livestream, "counters");
+                    }, Cts.Token);
+                    CreateInfoLog();
+                    await task;
 
-            TimeSpan timeSpan = DateTime.Now - start;
-            if (timeSpan.TotalMilliseconds < (DelayInSeconds * 1000))
-            {
-                await Task.Delay((int)((DelayInSeconds * 1000) - timeSpan.TotalMilliseconds), CancellationToken.None);
+                    await Task.Run(() => Hold(), CancellationToken.None);
+
+                    TimeSpan timeSpan = DateTime.Now - start;
+                    if (timeSpan.TotalMilliseconds < (DelayInSeconds * 1000))
+                    {
+                        await Task.Delay((int)((DelayInSeconds * 1000) - timeSpan.TotalMilliseconds), Cts.Token);
+                    }
+
+                    if (!Cts.Token.IsCancellationRequested)
+                    {
+                        Func<Task> func = new(() => RunAsync(index));
+                        FuncProcess funcProcess = new(index, OperationProcess.RunScrapper, func);
+                        _processService.RunQueue.Enqueue(funcProcess);
+                    }
+                }
             }
-
-            //Needs to reload the page
-            Task taskRestart = Task.Run(() =>
+            else
             {
-                ReloadScrapper();
-            }, CancellationToken.None);
-            await taskRestart;
-
-            //Case reloading wait
-            while (isReloading)
-            {
-                await Task.Delay(1000, CancellationToken.None);
+                _ = Task.Run(() => Stop(), CancellationToken.None);
             }
         }
-
-        await Task.Run(() => Stop(), CancellationToken.None);
-
-        //Stop timers
-        await Task.Run(() => _time.Stop(), CancellationToken.None);
-
-        //Send to file the rest of counter lines
-        if (listCounter.Count > 0)
+        catch (TaskCanceledException)
         {
-            await Task.Run(() =>
-            {
-                string max = string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", currentGame, ",", listCounter.Max().ToString());
-                List<string> newList = new()
-                {
-                    max
-                };
-                WriteData(newList, Environment.Website, Livestream, "counters");
-            }, CancellationToken.None);
+            _logger.LogWarning("RunAsync in ScrapperProcessService was cancelled");
+            _ = Task.Run(() => Stop(), CancellationToken.None);
         }
-
-        await Task.WhenAll(tasksFlush);
+        catch (Exception e)
+        {
+            _logger.LogCritical(e, "RunAsync in ScrapperProcessService finished with error");
+            _ = Task.Run(() => Stop(), CancellationToken.None);
+        }
     }
 
     private void WriteData(List<string> lines, string website, string livestream, string type, bool startNew = false)
     {
         string file = $"{ServiceUtils.RemoveSpecial(website.ToLower())}-{ServiceUtils.RemoveSpecial(livestream.ToLower())}-{type}.csv";
-        _file.WriteCsv("files/csv", file, lines, startNew);
+        _file.WriteFile("files/csv", file, lines, startNew);
     }
 
     //Handle page start by environment
@@ -461,34 +377,26 @@ public sealed class ScrapperInfoService : IScrapperService
             case "facebook":
                 try
                 {
-                    WebElement? webElementReady = _browser.WaitUntilElementExists(Environment.ReadyCheck);
-                    if (_browser.Browser != null && webElementReady == null)
+                    if (_browser.Browser != null)
                     {
                         WebElement? webElementOpen = _browser.WaitUntilElementClickable(Environment.OpenLive);
                         if (webElementOpen != null)
                         {
                             webElementOpen.Click();
-                            if (_browser.WaitUntilElementExists(Environment.ReadyCheck) != null)
-                            {
-                                result = true;
-                            }
-                            else
-                            {
-                                result = false;
-                            }
                         }
-                    }
-                    else if(webElementReady != null)
-                    {
-                        result = true;
-                    }
-                    else
-                    {
-                        result = false;
+
+                        if (_browser.WaitUntilElementVisible(Environment.ReadyCheck) != null && _browser.WaitUntilElementVisible(Environment.GameContainer) != null)
+                        {
+                            result = true;
+                        }
+                        else
+                        {
+                            result = false;
+                        }
                     }
                 }
                 catch (Exception)
-                {
+                {                    
                     _logger.LogWarning("Prepare scrapper page failed.");
                     result = false;
                 }

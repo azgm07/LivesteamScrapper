@@ -1,14 +1,15 @@
 using Xunit;
-using Scrapper.Services;
+using ScrapperLibrary.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Scrapper.Models;
+using ScrapperLibrary.Models;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using System.Threading;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Hosting;
+using ScrapperLibrary.Interfaces;
 
 namespace ScrapperUnitTests
 {

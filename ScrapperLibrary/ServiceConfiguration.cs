@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using ScrapperLibrary.Services;
 using ScrapperLibrary.Interfaces;
 
-namespace ScrapperLibrary.Services
+namespace ScrapperLibrary
 {
     public static class ServiceConfiguration
     {

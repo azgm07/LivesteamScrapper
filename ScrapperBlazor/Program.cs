@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
-using Scrapper.Models;
-using Scrapper.Services;
+using ScrapperLibrary.Models;
+using ScrapperLibrary.Services;
 using ScrapperBlazorLibrary.Data;
 using ScrapperBlazorLibrary.Services;
 

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ScrapperLibrary.Controllers;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,7 +9,7 @@ namespace ScrapperLibrary.Services
 {
     public class TrackerService
     {
-        public List<StreamTrackerService> ScopedInstances { get; private set; }
+        public List<TrackerController> ScopedInstances { get; private set; }
 
         public TrackerService()
         {

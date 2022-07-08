@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using ScrapperLibrary.Interfaces;
 
 namespace ScrapperLibrary.Services;
 

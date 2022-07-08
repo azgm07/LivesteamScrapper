@@ -1,7 +1,7 @@
 using ScrapperAspNet.Controllers;
 using Microsoft.AspNetCore.Mvc;
-using Scrapper.Models;
-using Scrapper.Services;
+using ScrapperLibrary.Models;
+using ScrapperLibrary.Services;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 using ScrapperBlazorLibrary.Services;

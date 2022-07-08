@@ -1,5 +1,5 @@
 using Xunit;
-using Scrapper.Services;
+using ScrapperLibrary.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Collections.Generic;
@@ -22,9 +22,9 @@ namespace ScrapperUnitTests
             int number = random.Next(100);
             lines.Add($"lineoftest: {number}");
 
-            fileService.WriteCsv("files/debug", "unittest.txt", lines, true);
+            fileService.WriteFile("files/debug", "unittest.txt", lines, true);
 
-            List<string> resultList = fileService.ReadCsv("files/debug", "unittest.txt");
+            List<string> resultList = fileService.ReadFile("files/debug", "unittest.txt");
             
             bool result = false;
 

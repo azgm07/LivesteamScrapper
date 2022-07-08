@@ -5,13 +5,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ScrapperLibrary.Services
+namespace ScrapperLibrary.Controllers
 {
-    public class StreamTrackerService
+    public class TrackerController
     {
         public TrackerResponse LastResponse { get; private set; }
 
-        public StreamTrackerService()
+        public TrackerController()
         {
             LastResponse = new();
         }

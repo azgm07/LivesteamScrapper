@@ -1,9 +1,9 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Scrapper.Models;
-using Scrapper.Services;
-using Library.Services;
+using ScrapperLibrary;
+using ScrapperLibrary.Models;
+using ScrapperLibrary.Services;
 
 namespace Scrapper.Main;
 public static class Program

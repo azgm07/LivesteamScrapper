@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using ScrapperLibrary.Interfaces;
 using ScrapperLibrary.Models;
 
 namespace ScrapperLibrary.Services
@@ -25,7 +26,7 @@ namespace ScrapperLibrary.Services
             {
                 try
                 {
-                    List<string> lines = _fileService.ReadCsv("config", "streams.txt");
+                    List<string> lines = _fileService.ReadFile("config", "streams.txt");
 
                     if (!lines.Any())
                     {

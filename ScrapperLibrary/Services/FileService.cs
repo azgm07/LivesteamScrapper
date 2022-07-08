@@ -1,13 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
+using ScrapperLibrary.Interfaces;
 
 namespace ScrapperLibrary.Services;
 
-public interface IFileService
-{
-    public void WriteCsv(string folder, string file, List<string> lines, bool erase = false);
-    public List<string> ReadCsv(string folder, string file);
-    public bool FileExists(string folder, string file);
-}
 public class FileService : IFileService
 {
     private readonly ILogger<FileService> _logger;
@@ -18,7 +13,7 @@ public class FileService : IFileService
     }
 
     //Write CSV lines with a list of strings
-    public void WriteCsv(string folder, string file, List<string> lines, bool erase = false)
+    public void WriteFile(string folder, string file, List<string> lines, bool erase = false)
     {
         string sCurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
         string sPath = Path.Combine(sCurrentDirectory, folder);
@@ -46,7 +41,7 @@ public class FileService : IFileService
         _logger.LogInformation("File saved in {file}.", sFilePath);
     }
 
-    public List<string> ReadCsv(string folder, string file)
+    public List<string> ReadFile(string folder, string file)
     {
         string filePath = Path.Combine(folder, file);
         string sCurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;

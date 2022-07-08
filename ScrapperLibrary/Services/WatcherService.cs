@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using ScrapperLibrary.Interfaces;
 using ScrapperLibrary.Models;
 using static ScrapperLibrary.Models.Enums;
 
@@ -399,7 +400,7 @@ public class WatcherService : IWatcherService
             lines.Add($"{stream.Website},{stream.Channel}");
         }
 
-        _file.WriteCsv("config", "streams.txt", lines, true);
+        _file.WriteFile("config", "streams.txt", lines, true);
     }
 
     public async Task StreamingWatcherAsync(List<string> streams, CancellationToken token)
@@ -484,7 +485,7 @@ public class WatcherService : IWatcherService
                                             lines.Add($"{item},{string.Join(",", debugCopy[item])}");
                                         }
                                     }
-                                    _file.WriteCsv("files/debug", "status.csv", lines, true);
+                                    _file.WriteFile("files/debug", "status.csv", lines, true);
                                 }
                                 catch (Exception)
                                 {
