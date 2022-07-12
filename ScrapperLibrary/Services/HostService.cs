@@ -7,17 +7,17 @@ namespace ScrapperLibrary.Services
 {
     public class HostService : BackgroundService
     {
-        private readonly IWatcherService _watcherService;
+        private readonly ITrackerService _trackerService;
         private readonly IFileService _fileService;
         private readonly ILogger<HostService> _logger;
         private readonly IHostApplicationLifetime _hostApplicationLifetime;
 
-        public HostService(IHostApplicationLifetime hostApplicationLifetime, ILogger<HostService> logger, IWatcherService watcherService, IFileService fileService)
+        public HostService(IHostApplicationLifetime hostApplicationLifetime, ILogger<HostService> logger, ITrackerService trackerService, IFileService fileService)
         {
             _hostApplicationLifetime = hostApplicationLifetime;
             _logger = logger;
             _fileService = fileService;
-            _watcherService = watcherService;
+            _trackerService = trackerService;
         }
 
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -32,7 +32,7 @@ namespace ScrapperLibrary.Services
                     {
                         _logger.LogWarning("Config file is empty, waiting for entries on web browser.");
                     }
-                    await _watcherService.StreamingWatcherAsync(lines, stoppingToken);
+                    await _trackerService.RunTrackerAsync(lines, stoppingToken);
                 }
                 catch (Exception ex)
                 {

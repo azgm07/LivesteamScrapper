@@ -22,12 +22,7 @@ namespace ScrapperBlazorLibrary.Services
             builder.Services.AddServerSideBlazor();
             builder.Services.AddHostedService<HostService>();
             builder.Services.AddSingleton<IFileService, FileService>();
-            builder.Services.AddSingleton<IWatcherService, WatcherService>();
-            builder.Services.AddSingleton<IProcessService, ProcessService>();
-            builder.Services.AddScoped<IBrowserService, BrowserService>();
-            builder.Services.AddScoped<IScrapperService, ScrapperProcessService>();
-            builder.Services.AddScoped<ITimeService, TimeService>();
-            builder.Services.AddSingleton<IWatcherService, WatcherService>();
+            builder.Services.AddSingleton<ITrackerService, TrackerService>();
             builder.Services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(60));
         }
 

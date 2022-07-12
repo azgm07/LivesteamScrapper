@@ -4,13 +4,14 @@
 
 @using ScrapperLibrary.Services
 @using ScrapperLibrary.Models
+@using ScrapperLibrary.Interfaces
 @using System.Collections.Concurrent
 @using System.Timers
 @using System.Text.RegularExpressions
 @using Microsoft.Extensions.DependencyInjection
 @using Microsoft.Extensions.Logging
 @using Moq
-@inject IWatcherService WatcherService
+@inject ITrackerService TrackerService
 @inject ILogger<HostService> _logger
 
 
@@ -41,7 +42,7 @@
         </div>
     </div>
     <div class="row align-items-start">
-        @if (streams == null)
+        @if (instances == null)
         {
             <p><em>Loading...</em></p>
         }
@@ -59,14 +60,14 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var stream in streams)
+                    @foreach (var instance in instances)
                     {
                         <tr>
-                            <td class="pt-2 pb-1 text-center border-end">@(char.ToUpper(stream.Website[0]) + stream.Website.Substring(1))</td>
-                            <td class="pt-2 pb-1 text-center border-end">@(char.ToUpper(stream.Channel[0]) + stream.Channel.Substring(1))</td>
-                            @if (stream.Status == Enums.ScrapperStatus.Waiting)
+                            <td class="pt-2 pb-1 text-center border-end">@(char.ToUpper(instance.Tracker.Website[0]) + instance.Tracker.Website.Substring(1))</td>
+                            <td class="pt-2 pb-1 text-center border-end">@(char.ToUpper(instance.Tracker.Channel[0]) + instance.Tracker.Channel.Substring(1))</td>
+                            @if (instance.Status == Enums.StreamStatus.Waiting)
                             {
-                                if (stream.WaitTimer.TimeLeft <= 0 || stream.WaitTimer.ElapsedOnce)
+                                if (instance.WaitTimer.TimeLeft <= 0 || instance.WaitTimer.ElapsedOnce)
                                 {
                                     <td class="pt-2 pb-1 text-center border-end">Starting...</td>
                                     <td class="pt-2 pb-1 text-center border-end"><strong>...</strong></td>
@@ -74,14 +75,14 @@
                                 }
                                 else
                                 {
-                                    <td class="pt-2 pb-1 text-center border-end">@stream.Status (@TimeSpan.FromMilliseconds(stream.WaitTimer.TimeLeft).ToString(@"mm\:ss"))</td>
+                                    <td class="pt-2 pb-1 text-center border-end">@instance.Status (@TimeSpan.FromMilliseconds(instance.WaitTimer.TimeLeft).ToString(@"mm\:ss"))</td>
                                     <td class="pt-2 pb-1 text-center text-black-50  border-end">Not Streaming</td>
                                     <td class="pt-2 pb-1 text-center text-black-50 border-end">Not Streaming</td>
                                 }
                             }
-                            else if(stream.Status == Enums.ScrapperStatus.Running)
+                            else if(instance.Status == Enums.StreamStatus.Running)
                             {
-                                @if (string.IsNullOrEmpty(stream.Scrapper.CurrentGame) && stream.Scrapper.ViewersCount == 0)
+                                @if (string.IsNullOrEmpty(instance.Tracker.LastResponse.CurrentGame) && instance.Tracker.LastResponse.CurrentViewers == 0)
                                 {
                                     <td class="pt-2 pb-1 text-center border-end"><strong>Loading...</strong></td>
                                     <td class="pt-2 pb-1 text-center border-end"><strong>...</strong></td>                                    
@@ -89,32 +90,32 @@
                                 }
                                 else
                                 {
-                                    <td class="pt-2 pb-1 text-center border-end"><strong>@stream.Status</strong></td>
-                                    <td class="pt-2 pb-1 text-center border-end">@stream.Scrapper.CurrentGame</td>
-                                    <td class="pt-2 pb-1 border-end"><span class="text-end d-flex justify-content-center">@String.Format("{0:n0}", stream.Scrapper.ViewersCount)</span></td>
+                                    <td class="pt-2 pb-1 text-center border-end"><strong>@instance.Status</strong></td>
+                                    <td class="pt-2 pb-1 text-center border-end">@instance.Tracker.LastResponse.CurrentGame</td>
+                                    <td class="pt-2 pb-1 border-end"><span class="text-end d-flex justify-content-center">@String.Format("{0:n0}", instance.Tracker.LastResponse.CurrentViewers)</span></td>
                                 }
                             }
                             else
                             {
-                                <td class="pt-2 pb-1 text-center border-end">@stream.Status</td>
+                                <td class="pt-2 pb-1 text-center border-end">@instance.Status</td>
                                 <td class="pt-2 pb-1 text-center text-black-50 border-end">Offline</td>
                                 <td class="pt-2 pb-1 text-center text-black-50 border-end">Offline</td>
                             }
                             <td class="pt-2 pb-1 ">
                                 <div class="d-flex flex-row-reverse">
-                                    <button type="button" class="btn btn-secondary ms-3" @onclick="() => RemoveStream(stream.Website,stream.Channel)" disabled="@DisableAllButtons">
+                                    <button type="button" class="btn btn-secondary ms-3" @onclick="() => RemoveStream(instance.Tracker.Website,instance.Tracker.Channel)" disabled="@DisableAllButtons">
                                         X
                                     </button>
 
-                                    @if(stream.Status == Enums.ScrapperStatus.Running || (stream.Status == Enums.ScrapperStatus.Waiting))
+                                    @if(instance.Status == Enums.StreamStatus.Running || (instance.Status == Enums.StreamStatus.Waiting))
                                     {
-                                        <button type="button" class="btn btn-danger ms-1" @onclick="() => StopStream(stream.Website, stream.Channel)" disabled="@DisableAllButtons">
+                                        <button type="button" class="btn btn-danger ms-1" @onclick="() => StopStream(instance.Tracker.Website, instance.Tracker.Channel)" disabled="@DisableAllButtons">
                                             Stop
                                         </button>
                                     }
                                     else
                                     {
-                                        <button type="button" class="btn btn-primary ms-1" @onclick="() => StartStream(stream.Website,stream.Channel)" disabled="@DisableAllButtons">
+                                        <button type="button" class="btn btn-primary ms-1" @onclick="() => StartStream(instance.Tracker.Website,instance.Tracker.Channel)" disabled="@DisableAllButtons">
                                             Start
                                         </button>                                        
                                     }
@@ -131,7 +132,7 @@
 
 
 @code {
-    private BlockingCollection<StreamObject> streams = new();
+    private BlockingCollection<Instance> instances = new();
 
     private string WebsiteAdd {get;set;} = "";
     private string ChannelAdd {get;set;} = "";
@@ -142,27 +143,15 @@
 
     protected override void OnInitialized()
     {
-        //Debug
-        if(debug)
-        {
-            IServiceScopeFactory mockScope = new Mock<IServiceScopeFactory>().Object;
-            StreamObject mockStream = new StreamObject("Test", "Testing", new StreamEnvironment(), mockScope, 10);
-            streams.Add(mockStream);            
-            streams.Add(mockStream);            
-            streams.Add(mockStream);            
-        }
-        else
-        {
-            Task.Run(UpdateOnSeconds, WatcherService.CancellationToken);            
-        }
+        Task.Run(UpdateOnSeconds, TrackerService.CurrentToken);
     }
 
     protected async Task UpdateOnSeconds()
     {
         while (true)
         {
-            List<StreamObject> localList = WatcherService.ListStreams;
-            streams = new BlockingCollection<StreamObject>(new ConcurrentQueue<StreamObject>(localList));;
+            List<Instance> localList = TrackerService.TrackerInstances;
+            instances = new BlockingCollection<Instance>(new ConcurrentQueue<Instance>(localList));;
             await InvokeAsync(() => { StateHasChanged(); });
             await Task.Delay(1000);            
         }
@@ -186,7 +175,7 @@
         else
         {
             DisableAllButtons = true;
-            if(!WatcherService.AddStream(website, channel))
+            if(!TrackerService.AddInstance(website, channel))
             {
                 _logger.LogInformation($"Main Window: Add -> Error adding Website: {website}, Channel: {channel}");
             }
@@ -197,7 +186,7 @@
     {
         DisableAllButtons = true;
         _logger.LogInformation($"Main Window: Starting All Streams");
-        WatcherService.StartAllStreamScrapper();
+        TrackerService.StartAllInstances();
         await Task.Delay(1000);
         DisableAllButtons = false;
     }
@@ -205,7 +194,7 @@
     {
         DisableAllButtons = true;
         _logger.LogInformation($"Main Window: Stopping All Streams");
-        WatcherService.StopAllStreamScrapper();
+        TrackerService.StopAllInstances();
         await Task.Delay(1000);
         DisableAllButtons = false;
     }
@@ -213,7 +202,7 @@
     {
         DisableAllButtons = true;
         _logger.LogInformation($"Main Window: Start -> Website: {website}, Channel: {channel}");
-        WatcherService.StartStream(website, channel);
+        TrackerService.StartInstance(website, channel);
         await Task.Delay(1000);
         DisableAllButtons = false;
     }
@@ -221,7 +210,7 @@
     {
         DisableAllButtons = true;
         _logger.LogInformation($"Main Window: Stop -> Website: {website}, Channel: {channel}");
-        WatcherService.StopStream(website, channel);
+        TrackerService.StopInstance(website, channel);
         await Task.Delay(1000);
         DisableAllButtons = false;
     }
@@ -229,7 +218,7 @@
     {
         DisableAllButtons = true;
         _logger.LogInformation($"Main Window: Remove -> Website: {website}, Channel: {channel}");
-        WatcherService.RemoveStream(website, channel);
+        TrackerService.RemoveInstance(website, channel);
         await Task.Delay(1000);
         DisableAllButtons = false;
     }

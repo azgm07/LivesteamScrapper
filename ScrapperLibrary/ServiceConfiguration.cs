@@ -12,11 +12,7 @@ namespace ScrapperLibrary
         {
             services.AddHostedService<HostService>();
             services.AddSingleton<IFileService, FileService>();
-            services.AddSingleton<IWatcherService, WatcherService>();
-            services.AddSingleton<IProcessService, ProcessService>();
-            services.AddScoped<IBrowserService, BrowserService>();
-            services.AddScoped<IScrapperService, ScrapperProcessService>();
-            services.AddScoped<ITimeService, TimeService>();
+            services.AddSingleton<ITrackerService, TrackerService>();
 
             services.Configure<HostOptions>(options =>
             {

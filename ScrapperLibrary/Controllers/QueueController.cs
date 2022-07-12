@@ -36,21 +36,9 @@ namespace ScrapperLibrary.Controllers
 
                     for (int i = 0; i < Threads; i++)
                     {
-                        if (ProcessQueue.TryDequeue(out QueueFunc? processStop) && processStop != null)
+                        if (ProcessQueue.TryDequeue(out QueueFunc? process) && process != null)
                         {
-                            listFunc.Add(processStop);
-                            List<Task> tasksList = new()
-                        {
-                            Task.Run(() => RemoveFromQueue(ProcessQueue, processStop.Index), CancellationToken.None)
-                        };
-                            for (int j = 0; j < listFunc.Count; j++)
-                            {
-                                if (listFunc[j].Index == processStop.Index)
-                                {
-                                    listFunc.RemoveAt(j);
-                                }
-                            }
-                            await Task.WhenAll(tasksList);
+                            listFunc.Add(process);
                         }
                     }
 

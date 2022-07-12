@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ScrapperLibrary;
+using ScrapperLibrary.Interfaces;
 using ScrapperLibrary.Models;
 using ScrapperLibrary.Services;
 
@@ -25,14 +26,14 @@ public static class Program
 
         Task appTask = app.RunAsync();
         
-        var watcher = app.Services.GetRequiredService<IWatcherService>();
+        var tracker = app.Services.GetRequiredService<ITrackerService>();
 
         _ = Task.Run(async () =>
         {
             ILogger _logger = app.Services.GetRequiredService<ILogger<HostService>>();
             _logger.LogInformation("Starting main activities in 3 seconds...");
             await Task.Delay(3000);
-            watcher.StartAllStreamScrapper();
+            tracker.StartAllInstances();
         });
 
         await appTask;

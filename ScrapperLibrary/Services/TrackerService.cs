@@ -11,14 +11,18 @@ using System.Threading.Tasks;
 
 namespace ScrapperLibrary.Services
 {
-    public class TrackerService
+    public class TrackerService : ITrackerService
     {
         public List<Instance> TrackerInstances { get; private set; }
+        public int TrackerSeconds { get; set; }
+        public int WaitSeconds { get; set; }
+        public CancellationToken CurrentToken { get; private set; }
 
         private readonly QueueController _queueController;
         private readonly IFileService _fileService;
         private readonly ILogger<TrackerService> _logger;
         private readonly ILoggerFactory _loggerFactory;
+
 
         public TrackerService(ILogger<TrackerService> logger, IFileService fileService, ILoggerFactory loggerFactory)
         {
@@ -27,28 +31,113 @@ namespace ScrapperLibrary.Services
             _logger = logger;
             _loggerFactory = loggerFactory;
             _queueController = new(loggerFactory.CreateLogger<QueueController>());
-        }
-
-        private void AddInstances(List<string> streamers, CancellationToken token)
-        {
-            foreach (var stream in streamers)
-            {
-                string[] str = stream.Split(',');
-                if (str.Length > 1 && !string.IsNullOrEmpty(str[0]) && !string.IsNullOrEmpty(str[1]))
-                {
-                    AddInstance(str[0], str[1], token, false);                    
-                }
-            }
+            TrackerSeconds = 60;
+            WaitSeconds = 300;
+            CurrentToken = new();
         }
 
         public async Task RunTrackerAsync(List<string> streams, CancellationToken token)
         {
+            CurrentToken = token;
+
             //Start process
             Task queueTask = Task.Run(() => _queueController.RunQueueAsync(token), CancellationToken.None);
 
             try
             {
-                await Task.Run(() => AddInstances(streams, token), CancellationToken.None);
+                await Task.Run(() => AddInstances(streams), CancellationToken.None);
+
+                //Setup Debugger
+                Dictionary<string, List<string>> debugData = new()
+                {
+                    { $"Times", new List<string>() }
+                };
+
+                bool flush = false;
+
+                using System.Timers.Timer timer = new(600000);
+                timer.Elapsed += (sender, e) => flush = true;
+                timer.AutoReset = true;
+                timer.Start();
+
+                int watcherDelay = 1000;
+
+                //Check and update
+                while (!token.IsCancellationRequested)
+                {
+                    if (TrackerInstances.Count > 0)
+                    {
+                        DateTime start = DateTime.Now;
+                        List<Instance> streamsCopy = new(TrackerInstances);
+
+                        //Debug create new time
+                        if (flush)
+                        {
+                            try
+                            {
+                                await Task.Run(() => debugData["Times"].Add($"{DateTime.Now:dd/MM/yyyy HH:mm:ss}"), CancellationToken.None);
+
+                                //Debug add status if channel already registered or create new
+                                foreach (Instance? stream in streamsCopy)
+                                {
+                                    await Task.Run(() =>
+                                    {
+                                        if (!debugData.ContainsKey($"{stream.Tracker.Website},{stream.Tracker.Channel}"))
+                                        {
+                                            debugData.Add($"{stream.Tracker.Website},{stream.Tracker.Channel}", new List<string>());
+                                        }
+                                        for (int i = debugData[$"{stream.Tracker.Website},{stream.Tracker.Channel}"].Count; i < debugData["Times"].Count - 1; i++)
+                                        {
+                                            debugData[$"{stream.Tracker.Website},{stream.Tracker.Channel}"].Add("");
+                                        }
+                                        debugData[$"{stream.Tracker.Website},{stream.Tracker.Channel}"].Add(stream.Status.ToString());
+                                    }, CancellationToken.None);
+                                }
+
+                                //Debug flush out
+                                await Task.Run(() =>
+                                {
+                                    try
+                                    {
+                                        Dictionary<string, List<string>> debugCopy = new(debugData);
+                                        List<string> lines = new()
+                                    {
+                                        $"Streams,{string.Join(",", debugCopy["Times"])}"
+                                    };
+                                        foreach (string item in debugCopy.Keys)
+                                        {
+                                            if (item != "Times")
+                                            {
+                                                lines.Add($"{item},{string.Join(",", debugCopy[item])}");
+                                            }
+                                        }
+                                        _fileService.WriteFile("files/debug", "status.csv", lines, true);
+                                    }
+                                    catch (Exception)
+                                    {
+                                        _logger.LogWarning("Failed to write the debugger for scrappers status.");
+                                    }
+                                }, CancellationToken.None);
+                                flush = false;
+                            }
+                            catch (TaskCanceledException)
+                            {
+                                _logger.LogWarning("StreamingWatcherAsync in WatcherService was cancelled");
+                            }
+                            catch (Exception e)
+                            {
+                                _logger.LogCritical(e, "StreamingWatcherAsync in WatcherService throwed an exception");
+                            }
+                        }
+
+                        int delay = watcherDelay - (int)(DateTime.Now - start).TotalMilliseconds;
+                        await Task.Delay(delay, token);
+                    }
+                    else
+                    {
+                        await Task.Delay(watcherDelay, token);
+                    }
+                }
             }
             catch (Exception e)
             {
@@ -57,61 +146,38 @@ namespace ScrapperLibrary.Services
             finally
             {
                 //Salve current streams
-                //await Task.Run(() => SaveCurrentStreams(), CancellationToken.None);
+                await Task.Run(() => SaveCurrentStreams(), CancellationToken.None);
 
                 //Finish task
-                //await Task.Run(() => AbortAllStreamScrapper(), CancellationToken.None);
+                await Task.Run(() => RemoveAllInstances(), CancellationToken.None);
 
                 await queueTask;
             }
         }
 
-        private void FlushData(StreamEnvironment environment, string channel, string currentGame, string counter)
-        {
-            string result = string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", currentGame, ",", counter);
-            List<string> newList = new()
-            {
-                result
-            };
-            WriteData(newList, environment.Website, channel, "counters");
-
-            CreateInfoLog(environment, channel, currentGame, counter);
-        }
-
-        private void WriteData(List<string> lines, string website, string livestream, string type, bool startNew = false)
-        {
-            string file = $"{ServiceUtils.RemoveSpecial(website.ToLower())}-{ServiceUtils.RemoveSpecial(livestream.ToLower())}-{type}.csv";
-            _fileService.WriteFile("files/csv", file, lines, startNew);
-        }
-        private void CreateInfoLog(StreamEnvironment environment, string channel, string currentGame, string viewers)
-        {
-            StringBuilder sb = new();
-            sb.Append($"Stream: {environment.Website}/{channel} | ");
-            sb.Append($"Playing: {currentGame} | ");
-            sb.Append($"Viewers Count: {viewers}");
-
-            _logger.LogInformation("{message}", sb.ToString());
-        }
-
-        public bool AddInstance(string website, string channel, CancellationToken token, bool start = true)
+        public bool AddInstance(string website, string channel, bool start = true, bool save = false)
         {
             try
             {
-                int index = TrackerInstances.FindIndex(instance => instance.Tracker.CurrentEnvironment.Website == website && instance.Tracker.Channel == channel);
+                int index = TrackerInstances.FindIndex(instance => instance.Tracker.Website == website &&
+                            instance.Tracker.Channel == channel);
                 if (index < 0)
                 {
-                    TrackerController tracker = new(StreamEnvironment.GetEnvironment(website), channel, _loggerFactory);
-                    Instance instance = new(Enums.StreamStatus.Stopped, tracker);
+                    TrackerController tracker = new(StreamEnvironment.GetEnvironment(website), channel, _loggerFactory, _fileService);
+                    Instance instance = new(TrackerInstances.Count, Enums.StreamStatus.Stopped, tracker, TrackerSeconds, WaitSeconds);
                     TrackerInstances.Add(instance);
-                    //SaveCurrentStreams();
+                    instance.CallRunEvent += Instance_CallRunEvent;
+
+                    if (save)
+                    {
+                        SaveCurrentStreams();
+                    }
 
                     if (start)
                     {
-                        Func<Task> func = new(() => tracker.GetInfoAsync(token));
-                        QueueFunc queueFunc = new(index, func);
-                        _queueController.ProcessQueue.Enqueue(queueFunc);
-                        instance.Status = Enums.StreamStatus.Running;
+                        instance.Start();
                     }
+
                     return true;
                 }
                 else
@@ -124,7 +190,173 @@ namespace ScrapperLibrary.Services
                 _logger.LogError(e, "Failed to add instance");
                 return false;
             }
+        }
 
+        public bool RemoveInstance(string website, string channel, bool saveFile = true)
+        {
+            try
+            {
+                int index = TrackerInstances.FindIndex(instance => instance.Tracker.Website == website &&
+                            instance.Tracker.Channel == channel);
+                if (index < 0)
+                {
+                    return false;
+                }
+                else
+                {
+                    TrackerInstances[index].Dispose();
+                    TrackerInstances.RemoveAt(index);
+                    if (saveFile)
+                    {
+                        SaveCurrentStreams();
+                    }
+                    return true;
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to remove instance");
+                return false;
+            }
+        }
+
+        public bool StartInstance(string website, string channel)
+        {
+            try
+            {
+                int index = TrackerInstances.FindIndex(instance => instance.Tracker.Website == website &&
+                            instance.Tracker.Channel == channel);
+                if (index < 0)
+                {
+                    return false;
+                }
+                else
+                {
+                    TrackerInstances[index].Start();
+                    return true;
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to start the streaming");
+                return false;
+            }
+        }
+
+        public bool StopInstance(string website, string channel)
+        {
+            try
+            {
+                int index = TrackerInstances.FindIndex(instance => instance.Tracker.Website == website &&
+                            instance.Tracker.Channel == channel);
+                if (index < 0)
+                {
+                    return false;
+                }
+                else
+                {
+                    TrackerInstances[index].Stop();
+                    return true;
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to start the streaming");
+                return false;
+            }
+        }
+
+        public void StartAllInstances()
+        {
+            try
+            {
+                _queueController.RemoveFromQueue(_queueController.ProcessQueue);
+                List<Action> actions = new();
+                foreach (var tracker in TrackerInstances.Select(tracker => tracker.Tracker))
+                {
+                    actions.Add(() =>
+                    {
+                        StartInstance(tracker.CurrentEnvironment.Website, tracker.Channel);
+                    });
+                }
+                Parallel.Invoke(actions.ToArray());
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Start all instances throwed an exception");
+            }
+        }
+
+        public void StopAllInstances()
+        {
+            try
+            {
+                _queueController.RemoveFromQueue(_queueController.ProcessQueue);
+                List<Action> actions = new();
+                foreach (var tracker in TrackerInstances.Select(tracker => tracker.Tracker))
+                {
+                    actions.Add(() =>
+                    {
+                        StopInstance(tracker.CurrentEnvironment.Website, tracker.Channel);
+                    });
+                }
+                Parallel.Invoke(actions.ToArray());
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Stop all instances throwed an exception");
+            }
+        }
+
+        private void AddInstances(List<string> streamers)
+        {
+            foreach (var stream in streamers)
+            {
+                string[] str = stream.Split(',');
+                if (str.Length > 1 && !string.IsNullOrEmpty(str[0]) && !string.IsNullOrEmpty(str[1]))
+                {
+                    AddInstance(str[0], str[1], false);
+                }
+            }
+        }
+
+        private void RemoveAllInstances()
+        {
+            try
+            {
+                _queueController.RemoveFromQueue(_queueController.ProcessQueue);
+                List<Action> actions = new();
+                foreach (var tracker in TrackerInstances.Select(tracker => tracker.Tracker))
+                {
+                    actions.Add(() =>
+                    {
+                        RemoveInstance(tracker.CurrentEnvironment.Website, tracker.Channel, false);
+                    });
+                }
+                Parallel.Invoke(actions.ToArray());
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Remove all instances throwed an exception");
+            }
+        }
+
+        private void SaveCurrentStreams()
+        {
+            List<string> lines = new();
+            foreach (var tracker in TrackerInstances.Select(tracker => tracker.Tracker))
+            {
+                lines.Add($"{tracker.CurrentEnvironment.Website},{tracker.Channel}");
+            }
+
+            _fileService.WriteFile("config", "streams.txt", lines, true);
+        }
+
+        private void Instance_CallRunEvent(Instance instance)
+        {
+            Func<Task> func = new(() => instance.Tracker.GetInfoAsync(CurrentToken));
+            QueueFunc queueFunc = new(instance.Index, func);
+            _queueController.ProcessQueue.Enqueue(queueFunc);
         }
     }
 }

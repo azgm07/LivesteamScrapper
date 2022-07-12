@@ -54,14 +54,14 @@ namespace ScrapperWpfApp
                 var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
                 mainWindow.Show();
 
-                var process = ServiceProvider.GetRequiredService<IProcessService>();
-                for (int i = 0; i < e.Args.Length-1; i++)
-                {
-                    if (e.Args[i] == "-thread" && int.TryParse(e.Args[i+1], out int value))
-                    {
-                        process.Threads = value;
-                    }
-                }
+                //var process = ServiceProvider.GetRequiredService<I>();
+                //for (int i = 0; i < e.Args.Length-1; i++)
+                //{
+                //    if (e.Args[i] == "-thread" && int.TryParse(e.Args[i+1], out int value))
+                //    {
+                //        process.Threads = value;
+                //    }
+                //}
             }
 
             mainTask = _host.RunAsync();

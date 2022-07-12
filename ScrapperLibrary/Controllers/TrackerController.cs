@@ -16,14 +16,33 @@ namespace ScrapperLibrary.Controllers
     {
         public TrackerResponse LastResponse { get; private set; }
         public StreamEnvironment CurrentEnvironment { get; private set; }
+        public string Website
+        {
+            get
+            {
+                if(CurrentEnvironment != null)
+                {
+                    return CurrentEnvironment.Website;
+                }
+                else
+                {
+                    return String.Empty;
+                }
+            }
+        }
         public string Channel { get; private set; }
 
         private readonly ILogger<TrackerController> _logger;
+        private readonly IFileService _fileService;
         private readonly DriverController _driver;
         private readonly string _url;
         private readonly int _maxFails;
 
-        public TrackerController(StreamEnvironment environment, string channel, ILoggerFactory loggerFactory, int maxFails = 3)
+        //Events
+        public delegate void NewInfoEventHandler(bool result);
+        public event NewInfoEventHandler? NewInfoEvent;
+
+        public TrackerController(StreamEnvironment environment, string channel, ILoggerFactory loggerFactory, IFileService fileService, int maxFails = 3)
         {
             LastResponse = new();
             CurrentEnvironment = environment;
@@ -32,12 +51,18 @@ namespace ScrapperLibrary.Controllers
 
             _logger = loggerFactory.CreateLogger<TrackerController>();
             _driver = new(loggerFactory.CreateLogger<DriverController>());
+            _fileService = fileService;
             _maxFails = maxFails;
+        }
+
+        public void ResetTracker()
+        {
+            LastResponse = new();
         }
 
         public async Task<TrackerResponse?> GetInfoAsync(CancellationToken token)
         {
-            TrackerResponse response = new();
+            TrackerResponse? response = null;
             try
             {
                 using (WebDriver? driver = _driver.CreateDriver())
@@ -71,31 +96,42 @@ namespace ScrapperLibrary.Controllers
 
                             if (viewers == null || viewers.HasValue && viewers <= 0 || string.IsNullOrEmpty(currentGame))
                             {
-                                return null;
+                                response = null;
                             }
                             else
-                            {                                
+                            {
+                                response = new();
+                                FlushData(CurrentEnvironment, Channel, currentGame, viewers.Value.ToString());
                                 response.CurrentGame = currentGame;
                                 response.CurrentViewers = viewers.Value;
                                 LastResponse = response;
-                                return response;
                             }
                         }
                         else
                         {
-                            return null;
+                            response = null;
                         }
                     }
                     else
                     {
-                        return null;
+                        response = null;
                     }
                 }
             }
             catch (Exception)
             {
-                return null;
+                response = null;
             }
+
+            if (response != null)
+            {
+                NewInfoEvent?.Invoke(true);
+            }
+            else
+            {
+                NewInfoEvent?.Invoke(false);
+            }
+            return response;
         }
 
         private bool OpenPage(WebDriver driver)
@@ -209,6 +245,33 @@ namespace ScrapperLibrary.Controllers
                 _logger.LogWarning("Element for Current Game was not found. ({locator})", CurrentEnvironment.GameContainer);
                 return null;
             }
+        }
+
+        private void FlushData(StreamEnvironment environment, string channel, string currentGame, string counter)
+        {
+            string result = string.Concat(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"), ",", currentGame, ",", counter);
+            List<string> newList = new()
+            {
+                result
+            };
+            WriteData(newList, environment.Website, channel, "counters");
+
+            CreateInfoLog(environment, channel, currentGame, counter);
+        }
+
+        private void WriteData(List<string> lines, string website, string livestream, string type, bool startNew = false)
+        {
+            string file = $"{ServiceUtils.RemoveSpecial(website.ToLower())}-{ServiceUtils.RemoveSpecial(livestream.ToLower())}-{type}.csv";
+            _fileService.WriteFile("files/csv", file, lines, startNew);
+        }
+        private void CreateInfoLog(StreamEnvironment environment, string channel, string currentGame, string viewers)
+        {
+            StringBuilder sb = new();
+            sb.Append($"Stream: {environment.Website}/{channel} | ");
+            sb.Append($"Playing: {currentGame} | ");
+            sb.Append($"Viewers Count: {viewers}");
+
+            _logger.LogInformation("{message}", sb.ToString());
         }
     }
 }
