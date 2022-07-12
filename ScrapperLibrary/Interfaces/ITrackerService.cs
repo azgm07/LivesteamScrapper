@@ -1,4 +1,4 @@
-﻿using ScrapperLibrary.Models;
+﻿using ScrapperLibrary.Controllers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,7 +9,7 @@ namespace ScrapperLibrary.Interfaces
 {
     public interface ITrackerService
     {
-        List<Instance> TrackerInstances { get; }
+        List<InstanceController> TrackerInstances { get; }
         int TrackerSeconds { get; set; }
         int WaitSeconds { get; set; }
         CancellationToken CurrentToken { get; }

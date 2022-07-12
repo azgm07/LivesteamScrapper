@@ -4,6 +4,7 @@
 
 @using ScrapperLibrary.Services
 @using ScrapperLibrary.Models
+@using ScrapperLibrary.Controllers
 @using ScrapperLibrary.Interfaces
 @using System.Collections.Concurrent
 @using System.Timers
@@ -132,7 +133,7 @@
 
 
 @code {
-    private BlockingCollection<Instance> instances = new();
+    private BlockingCollection<InstanceController> instances = new();
 
     private string WebsiteAdd {get;set;} = "";
     private string ChannelAdd {get;set;} = "";
@@ -150,8 +151,8 @@
     {
         while (true)
         {
-            List<Instance> localList = TrackerService.TrackerInstances;
-            instances = new BlockingCollection<Instance>(new ConcurrentQueue<Instance>(localList));;
+            List<InstanceController> localList = TrackerService.TrackerInstances;
+            instances = new BlockingCollection<InstanceController>(new ConcurrentQueue<InstanceController>(localList));;
             await InvokeAsync(() => { StateHasChanged(); });
             await Task.Delay(1000);            
         }

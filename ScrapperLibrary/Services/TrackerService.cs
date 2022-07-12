@@ -13,7 +13,7 @@ namespace ScrapperLibrary.Services
 {
     public class TrackerService : ITrackerService
     {
-        public List<Instance> TrackerInstances { get; private set; }
+        public List<InstanceController> TrackerInstances { get; private set; }
         public int TrackerSeconds { get; set; }
         public int WaitSeconds { get; set; }
         public CancellationToken CurrentToken { get; private set; }
@@ -68,7 +68,7 @@ namespace ScrapperLibrary.Services
                     if (TrackerInstances.Count > 0)
                     {
                         DateTime start = DateTime.Now;
-                        List<Instance> streamsCopy = new(TrackerInstances);
+                        List<InstanceController> streamsCopy = new(TrackerInstances);
 
                         //Debug create new time
                         if (flush)
@@ -78,7 +78,7 @@ namespace ScrapperLibrary.Services
                                 await Task.Run(() => debugData["Times"].Add($"{DateTime.Now:dd/MM/yyyy HH:mm:ss}"), CancellationToken.None);
 
                                 //Debug add status if channel already registered or create new
-                                foreach (Instance? stream in streamsCopy)
+                                foreach (InstanceController? stream in streamsCopy)
                                 {
                                     await Task.Run(() =>
                                     {
@@ -164,7 +164,7 @@ namespace ScrapperLibrary.Services
                 if (index < 0)
                 {
                     TrackerController tracker = new(StreamEnvironment.GetEnvironment(website), channel, _loggerFactory, _fileService);
-                    Instance instance = new(TrackerInstances.Count, Enums.StreamStatus.Stopped, tracker, TrackerSeconds, WaitSeconds);
+                    InstanceController instance = new(TrackerInstances.Count, Enums.StreamStatus.Stopped, tracker, TrackerSeconds, WaitSeconds);
                     TrackerInstances.Add(instance);
                     instance.CallRunEvent += Instance_CallRunEvent;
 
@@ -352,7 +352,7 @@ namespace ScrapperLibrary.Services
             _fileService.WriteFile("config", "streams.txt", lines, true);
         }
 
-        private void Instance_CallRunEvent(Instance instance)
+        private void Instance_CallRunEvent(InstanceController instance)
         {
             Func<Task> func = new(() => instance.Tracker.GetInfoAsync(CurrentToken));
             QueueFunc queueFunc = new(instance.Index, func);

@@ -1,4 +1,4 @@
-﻿using ScrapperLibrary.Controllers;
+﻿using ScrapperLibrary.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,9 +6,9 @@ using System.Text;
 using System.Threading.Tasks;
 using static ScrapperLibrary.Models.Enums;
 
-namespace ScrapperLibrary.Models
+namespace ScrapperLibrary.Controllers
 {
-    public sealed class Instance : IDisposable 
+    public sealed class InstanceController : IDisposable
     {
         public StreamStatus Status { get; private set; }
         public TrackerController Tracker { get; set; }
@@ -16,11 +16,11 @@ namespace ScrapperLibrary.Models
         public TimerPlus RunTimer { get; private set; }
         public readonly int Index;
 
-        public delegate void CallRunEventHandler(Instance instance);
+        public delegate void CallRunEventHandler(InstanceController instance);
 
         public event CallRunEventHandler? CallRunEvent;
 
-        public Instance(int index, StreamStatus status, TrackerController tracker, int delayToRun, int secondsToWait)
+        public InstanceController(int index, StreamStatus status, TrackerController tracker, int delayToRun, int secondsToWait)
         {
             Index = index;
             Status = status;
@@ -43,24 +43,24 @@ namespace ScrapperLibrary.Models
 
         public void Start()
         {
-            this.Status = StreamStatus.Running;
+            Status = StreamStatus.Running;
             CallRunEvent?.Invoke(this);
             RunTimer.Start();
         }
 
         public void Stop()
         {
-            this.Status = StreamStatus.Stopped;
+            Status = StreamStatus.Stopped;
             RunTimer.Stop();
         }
 
         private void WaitTimer_ElapsedOnceEvent()
         {
-            if(this.Status == StreamStatus.Waiting)
+            if (Status == StreamStatus.Waiting)
             {
                 WaitTimer.Stop();
                 RunTimer.Start();
-                this.Status = StreamStatus.Running;
+                Status = StreamStatus.Running;
             }
             else
             {
@@ -70,7 +70,7 @@ namespace ScrapperLibrary.Models
 
         private void RunTimer_ElapsedOnceEvent()
         {
-            if(this.Status == StreamStatus.Running)
+            if (Status == StreamStatus.Running)
             {
                 CallRunEvent?.Invoke(this);
                 RunTimer.Start();
@@ -84,9 +84,9 @@ namespace ScrapperLibrary.Models
 
         private void Tracker_NewInfoEvent(bool result)
         {
-            if (!result && this.Status == StreamStatus.Running)
+            if (!result && Status == StreamStatus.Running)
             {
-                this.Status = StreamStatus.Waiting;
+                Status = StreamStatus.Waiting;
                 WaitTimer.Start();
                 Tracker.ResetTracker();
             }
